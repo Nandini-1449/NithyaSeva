@@ -136,5 +136,14 @@ h2 { font-size: clamp(32px, 4vw, 43px); line-height: 1.22; margin-bottom: 0; fon
   .site-footer { align-items: flex-start; flex-direction: column; padding: 24px 22px; gap: 10px; }
 }
 
-/* Keep all three service cards visually consistent. */
-.service-card-02 { background: #fff; color: var(--ink); border-color: #e4ebe0; }
+
+/* Explicitly keep every service card identical, including Discover Work. */
+.services-section .service-grid .service-card,
+.services-section .service-grid .service-card:nth-child(2) {
+  background-color: #fff;
+  color: var(--ink);
+  border: 1px solid #e4ebe0;
+}
+.services-section .service-grid .service-card h3 { color: var(--ink); }
+.services-section .service-grid .service-card p { color: var(--muted); }
+.services-section .service-grid .service-card .service-link { color: var(--green); }
