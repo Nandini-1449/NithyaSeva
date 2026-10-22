@@ -88,7 +88,7 @@ function App() {
         </div>
         <div className="service-grid">
           {services.map((service) => (
-            <article className="service-card" key={service.number}>
+            <article className={`service-card service-card-${service.number}`} key={service.number}>
               <div className="service-card-top"><span className="service-icon">{service.icon}</span><span className="service-number">{service.number}</span></div>
               <h3>{service.title}</h3>
               <p>{service.description}</p>
