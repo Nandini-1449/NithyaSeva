@@ -147,3 +147,18 @@ h2 { font-size: clamp(32px, 4vw, 43px); line-height: 1.22; margin-bottom: 0; fon
 .services-section .service-grid .service-card h3 { color: var(--ink); }
 .services-section .service-grid .service-card p { color: var(--muted); }
 .services-section .service-grid .service-card .service-link { color: var(--green); }
+
+
+/* Keep all three service cards visually consistent. */
+.services-section .service-grid > .service-card,
+.services-section .service-grid > .service-card:nth-child(2) {
+  background: #fff !important;
+  color: #17372c !important;
+  border: 1px solid #e4ebe0 !important;
+  box-shadow: none;
+}
+.services-section .service-grid > .service-card h3 { color: #17372c !important; }
+.services-section .service-grid > .service-card p { color: #68796f !important; }
+.services-section .service-grid > .service-card .service-link { color: #24784d !important; }
+.services-section .service-grid > .service-card .service-icon { background: #eaf3e9 !important; color: #24784d !important; }
+.services-section .service-grid > .service-card:hover { transform: translateY(-4px); box-shadow: 0 14px 35px #214a2910 !important; }
