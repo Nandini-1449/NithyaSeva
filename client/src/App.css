@@ -135,3 +135,6 @@ h2 { font-size: clamp(32px, 4vw, 43px); line-height: 1.22; margin-bottom: 0; fon
   .mission-section h2 { font-size: 26px; }
   .site-footer { align-items: flex-start; flex-direction: column; padding: 24px 22px; gap: 10px; }
 }
+
+/* Keep all three service cards visually consistent. */
+.service-card-02 { background: #fff; color: var(--ink); border-color: #e4ebe0; }
