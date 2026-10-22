@@ -1,7 +1,8 @@
 import react from '@vitejs/plugin-react'
 import { defineConfig } from 'vite'
 
-// https://vite.dev/config/
+// Use the repository path when publishing on GitHub Pages.
 export default defineConfig({
+  base: '/NithyaSeva/',
   plugins: [react()],
 })
