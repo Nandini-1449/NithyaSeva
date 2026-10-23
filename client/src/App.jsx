@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import './App.css'
 import professionalWorkers from './assets/professional-workers.svg'
+import Dashboard from './Dashboard'
 
 const services = [
   {
@@ -169,6 +170,8 @@ function App() {
             <button className="back-home" type="button" onClick={() => { setAuthPage(''); setError(''); setNotice('') }}>← Back to homepage</button>
           </div>
         </section>
+      ) : signedInUser ? (
+        <Dashboard user={signedInUser} onLogout={handleLogout} />
       ) : (
         <>
           <section className="hero" id="home">
