@@ -108,20 +108,20 @@ function App() {
           <span>Nithya<span className="brand-accent">Seva</span></span>
         </a>
         <nav aria-label="Main navigation">
-          <a className="nav-link active" href="#home" onClick={() => setAuthPage('')}>Home</a>
-          {!authPage && <>
-            <a className="nav-link" href="#services">Services</a>
-            <a className="nav-link" href="#about">About us</a>
-          </>}
-          {signedInUser ? (
-            <span className="nav-user">Hi, {signedInUser.full_name}</span>
+          <a className={`nav-link ${!authPage ? 'active' : ''}`} href="#home" onClick={() => setAuthPage('')}>Home</a>
+          <a className="nav-link" href="#services" onClick={() => setAuthPage('')}>Services</a>
+          <a className="nav-link" href="#about" onClick={() => setAuthPage('')}>About us</a>
+          {!signedInUser ? (
+            <>
+              <button className={`nav-login ${authPage === 'login' ? 'active' : ''}`} type="button" onClick={() => openAuth('login')}>Login</button>
+              <button className={`nav-cta ${authPage === 'register' ? 'active' : ''}`} type="button" onClick={() => openAuth('register')}>Register <span aria-hidden="true">↗</span></button>
+            </>
           ) : (
             <>
-              <button className="nav-login" type="button" onClick={() => openAuth('login')}>Log in</button>
-              <button className="nav-cta" type="button" onClick={() => openAuth('register')}>Register <span aria-hidden="true">↗</span></button>
+              <span className="nav-user">Hi, {signedInUser.full_name}</span>
+              <button className="nav-login" type="button" onClick={handleLogout}>Log out</button>
             </>
           )}
-          {signedInUser && <button className="nav-login" type="button" onClick={handleLogout}>Log out</button>}
         </nav>
       </header>
 
@@ -185,8 +185,8 @@ function App() {
                 transparency, and a community that values every skill.
               </p>
               <div className="hero-actions">
-                <button className="primary-button" type="button" onClick={() => openAuth('register')}>Explore NithyaSeva <span aria-hidden="true">↗</span></button>
-                <a className="text-button" href="#about">Discover our mission <span aria-hidden="true">→</span></a>
+                <button className="primary-button" type="button" onClick={() => openAuth('register')}>Register <span aria-hidden="true">↗</span></button>
+                <button className="text-button" type="button" onClick={() => openAuth('login')}>Login <span aria-hidden="true">→</span></button>
               </div>
               <div className="hero-note">
                 <span className="note-check">✓</span>
