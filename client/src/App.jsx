@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import './App.css'
 import professionalWorkers from './assets/professional-workers.svg'
 
@@ -29,77 +30,210 @@ const services = [
 ]
 
 function App() {
+  const [authPage, setAuthPage] = useState('')
+  const [fullName, setFullName] = useState('')
+  const [email, setEmail] = useState('')
+  const [phone, setPhone] = useState('')
+  const [password, setPassword] = useState('')
+  const [role, setRole] = useState('customer')
+  const [notice, setNotice] = useState('')
+  const [error, setError] = useState('')
+  const [busy, setBusy] = useState(false)
+  const [signedInUser, setSignedInUser] = useState(() => {
+    try {
+      const saved = localStorage.getItem('nithyaseva_user')
+      return saved ? JSON.parse(saved) : null
+    } catch {
+      return null
+    }
+  })
+
+  function openAuth(page) {
+    setAuthPage(page)
+    setNotice('')
+    setError('')
+    setPassword('')
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+  }
+
+  async function handleAuthSubmit(event) {
+    event.preventDefault()
+    setBusy(true)
+    setError('')
+    setNotice('')
+
+    const endpoint = authPage === 'register' ? 'register' : 'login'
+    const payload = authPage === 'register'
+      ? { fullName, email, phone, password, role }
+      : { email, password }
+
+    try {
+      const response = await fetch(`http://localhost:5000/api/auth/${endpoint}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      })
+      const data = await response.json()
+
+      if (!response.ok || !data.success) {
+        throw new Error(data.message || 'Something went wrong. Please try again.')
+      }
+
+      localStorage.setItem('nithyaseva_token', data.token)
+      localStorage.setItem('nithyaseva_user', JSON.stringify(data.user))
+      setSignedInUser(data.user)
+      setNotice(authPage === 'register' ? 'Your account has been created successfully.' : 'You are now logged in successfully.')
+      setPassword('')
+    } catch (requestError) {
+      setError(requestError.message || 'Could not connect to the server. Make sure the NithyaSeva backend is running.')
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  function handleLogout() {
+    localStorage.removeItem('nithyaseva_token')
+    localStorage.removeItem('nithyaseva_user')
+    setSignedInUser(null)
+    setNotice('')
+    setError('')
+    setAuthPage('')
+  }
+
   return (
     <main>
       <header className="site-header">
-        <a className="brand" href="#home" aria-label="NithyaSeva home">
+        <a className="brand" href="#home" aria-label="NithyaSeva home" onClick={() => setAuthPage('')}>
           <span className="brand-mark">N</span>
           <span>Nithya<span className="brand-accent">Seva</span></span>
         </a>
         <nav aria-label="Main navigation">
-          <a className="nav-link active" href="#home">Home</a>
-          <a className="nav-link" href="#services">Services</a>
-          <a className="nav-link" href="#about">About us</a>
-          <a className="nav-cta" href="#services">Get started <span aria-hidden="true">↗</span></a>
+          <a className="nav-link active" href="#home" onClick={() => setAuthPage('')}>Home</a>
+          {!authPage && <>
+            <a className="nav-link" href="#services">Services</a>
+            <a className="nav-link" href="#about">About us</a>
+          </>}
+          {signedInUser ? (
+            <span className="nav-user">Hi, {signedInUser.full_name}</span>
+          ) : (
+            <>
+              <button className="nav-login" type="button" onClick={() => openAuth('login')}>Log in</button>
+              <button className="nav-cta" type="button" onClick={() => openAuth('register')}>Register <span aria-hidden="true">↗</span></button>
+            </>
+          )}
+          {signedInUser && <button className="nav-login" type="button" onClick={handleLogout}>Log out</button>}
         </nav>
       </header>
 
-      <section className="hero" id="home">
-        <div className="hero-copy">
-          <p className="eyebrow"><span className="eyebrow-dot" /> OPPORTUNITY. DIGNITY. GROWTH.</p>
-          <h1>Good work deserves<br />a <span>better future.</span></h1>
-          <p className="hero-description">
-            Connecting skilled workers with meaningful opportunities through trust,
-            transparency, and a community that values every skill.
-          </p>
-          <div className="hero-actions">
-            <a className="primary-button" href="#services">Explore NithyaSeva <span aria-hidden="true">↗</span></a>
-            <a className="text-button" href="#about">Discover our mission <span aria-hidden="true">→</span></a>
+      {authPage ? (
+        <section className="auth-section" aria-labelledby="auth-title">
+          <div className="auth-decoration">
+            <p className="eyebrow"><span className="eyebrow-dot" /> OPPORTUNITY. DIGNITY. GROWTH.</p>
+            <h1>{authPage === 'register' ? <>Join a community<br />that values <span>your work.</span></> : <>Welcome back<br />to <span>NithyaSeva.</span></>}</h1>
+            <p>{authPage === 'register'
+              ? 'Create an account to find trusted services or discover meaningful work opportunities.'
+              : 'Log in to continue your journey with the NithyaSeva community.'}</p>
+            <img src={professionalWorkers} alt="NithyaSeva service tools illustration" />
           </div>
-          <div className="hero-note">
-            <span className="note-check">✓</span>
-            <span>Built for workers. Designed for a stronger community.</span>
+          <div className="auth-card">
+            <p className="eyebrow">{authPage === 'register' ? 'GET STARTED' : 'YOUR ACCOUNT'}</p>
+            <h2 id="auth-title">{authPage === 'register' ? 'Create your account' : 'Log in'}</h2>
+            <p className="auth-subtitle">{authPage === 'register' ? 'A few details to get you started.' : 'Enter your details to access your account.'}</p>
+
+            {notice && <div className="auth-message success-message" role="status">{notice}</div>}
+            {error && <div className="auth-message error-message" role="alert">{error}</div>}
+
+            <form className="auth-form" onSubmit={handleAuthSubmit}>
+              {authPage === 'register' && <>
+                <label htmlFor="fullName">Full name</label>
+                <input id="fullName" name="fullName" autoComplete="name" value={fullName} onChange={e => setFullName(e.target.value)} maxLength={120} required placeholder="Enter your full name" />
+              </>}
+              <label htmlFor="email">Email address</label>
+              <input id="email" name="email" type="email" autoComplete="email" value={email} onChange={e => setEmail(e.target.value)} maxLength={255} required placeholder="you@example.com" />
+              {authPage === 'register' && <>
+                <label htmlFor="phone">Phone number <span className="optional-label">(optional)</span></label>
+                <input id="phone" name="phone" type="tel" autoComplete="tel" value={phone} onChange={e => setPhone(e.target.value)} placeholder="Enter your phone number" />
+                <label htmlFor="role">I want to join as</label>
+                <select id="role" name="role" value={role} onChange={e => setRole(e.target.value)}>
+                  <option value="customer">Customer — find skilled workers</option>
+                  <option value="worker">Worker — find job opportunities</option>
+                </select>
+              </>}
+              <label htmlFor="password">Password</label>
+              <input id="password" name="password" type="password" autoComplete={authPage === 'register' ? 'new-password' : 'current-password'} value={password} onChange={e => setPassword(e.target.value)} minLength={authPage === 'register' ? 8 : undefined} maxLength={72} required placeholder={authPage === 'register' ? 'At least 8 characters' : 'Enter your password'} />
+              <button className="auth-submit" type="submit" disabled={busy}>
+                {busy ? 'Please wait…' : authPage === 'register' ? 'Create account' : 'Log in'} <span aria-hidden="true">↗</span>
+              </button>
+            </form>
+            <p className="auth-switch">
+              {authPage === 'register' ? 'Already have an account?' : 'New to NithyaSeva?'}{' '}
+              <button type="button" onClick={() => openAuth(authPage === 'register' ? 'login' : 'register')}>
+                {authPage === 'register' ? 'Log in' : 'Create an account'}
+              </button>
+            </p>
+            <button className="back-home" type="button" onClick={() => { setAuthPage(''); setError(''); setNotice('') }}>← Back to homepage</button>
           </div>
-        </div>
-        <div className="hero-art" aria-label="Professional service tools arranged in a floating composition">
-          <div className="art-orbit orbit-one" />
-          <div className="art-orbit orbit-two" />
-          <div className="art-sun" />
-          <div className="art-leaf leaf-one" />
-          <div className="art-leaf leaf-two" />
-          <img
-            className="professional-workers-image"
-            src={professionalWorkers}
-            alt="Professional toolbox, maintenance tools, cleaning supplies, gloves, folded towels and a plant"
-          />
-        </div>
-      </section>
+        </section>
+      ) : (
+        <>
+          <section className="hero" id="home">
+            <div className="hero-copy">
+              <p className="eyebrow"><span className="eyebrow-dot" /> OPPORTUNITY. DIGNITY. GROWTH.</p>
+              <h1>Good work deserves<br />a <span>better future.</span></h1>
+              <p className="hero-description">
+                Connecting skilled workers with meaningful opportunities through trust,
+                transparency, and a community that values every skill.
+              </p>
+              <div className="hero-actions">
+                <button className="primary-button" type="button" onClick={() => openAuth('register')}>Explore NithyaSeva <span aria-hidden="true">↗</span></button>
+                <a className="text-button" href="#about">Discover our mission <span aria-hidden="true">→</span></a>
+              </div>
+              <div className="hero-note">
+                <span className="note-check">✓</span>
+                <span>Built for workers. Designed for a stronger community.</span>
+              </div>
+            </div>
+            <div className="hero-art" aria-label="Professional service tools arranged in a floating composition">
+              <div className="art-orbit orbit-one" />
+              <div className="art-orbit orbit-two" />
+              <div className="art-sun" />
+              <div className="art-leaf leaf-one" />
+              <div className="art-leaf leaf-two" />
+              <img
+                className="professional-workers-image"
+                src={professionalWorkers}
+                alt="Professional toolbox, maintenance tools, cleaning supplies, gloves, folded towels and a plant"
+              />
+            </div>
+          </section>
 
-      <section className="services-section" id="services">
-        <div className="section-heading">
-          <div><p className="eyebrow">A PLATFORM FOR EVERYONE</p><h2>One community.<br /><span>More possibilities.</span></h2></div>
-          <p className="section-intro">Whether you need a helping hand or are looking for your next opportunity, NithyaSeva brings people and possibilities together.</p>
-        </div>
-        <div className="service-grid">
-          {services.map((service) => (
-            <article className="service-card" key={service.number}>
-              <div className="service-card-top"><span className="service-icon">{service.icon}</span><span className="service-number">{service.number}</span></div>
-              <h3>{service.title}</h3>
-              <p>{service.description}</p>
-              <a href="#about" className="service-link">{service.action} <span aria-hidden="true">→</span></a>
-            </article>
-          ))}
-        </div>
-      </section>
+          <section className="services-section" id="services">
+            <div className="section-heading">
+              <div><p className="eyebrow">A PLATFORM FOR EVERYONE</p><h2>One community.<br /><span>More possibilities.</span></h2></div>
+              <p className="section-intro">Whether you need a helping hand or are looking for your next opportunity, NithyaSeva brings people and possibilities together.</p>
+            </div>
+            <div className="service-grid">
+              {services.map((service) => (
+                <article className="service-card" key={service.number}>
+                  <div className="service-card-top"><span className="service-icon">{service.icon}</span><span className="service-number">{service.number}</span></div>
+                  <h3>{service.title}</h3>
+                  <p>{service.description}</p>
+                  <button type="button" onClick={() => openAuth(service.number === '02' ? 'register' : 'login')} className="service-link">{service.action} <span aria-hidden="true">→</span></button>
+                </article>
+              ))}
+            </div>
+          </section>
 
-      <section className="mission-section" id="about">
-        <div className="mission-symbol" aria-hidden="true"><span>✳</span></div>
-        <div><p className="eyebrow">OUR PURPOSE</p><h2>Work with dignity.<br /><span>Grow with confidence.</span></h2></div>
-        <p className="mission-copy">NithyaSeva is building a more connected, dependable, and empowering service marketplace—where people can find work, access opportunities, and build trust through every interaction.</p>
-      </section>
+          <section className="mission-section" id="about">
+            <div className="mission-symbol" aria-hidden="true"><span>✳</span></div>
+            <div><p className="eyebrow">OUR PURPOSE</p><h2>Work with dignity.<br /><span>Grow with confidence.</span></h2></div>
+            <p className="mission-copy">NithyaSeva is building a more connected, dependable, and empowering service marketplace—where people can find work, access opportunities, and build trust through every interaction.</p>
+          </section>
+        </>
+      )}
 
       <footer className="site-footer">
-        <a className="brand footer-brand" href="#home"><span className="brand-mark">N</span><span>Nithya<span className="brand-accent">Seva</span></span></a>
+        <a className="brand footer-brand" href="#home" onClick={() => setAuthPage('')}><span className="brand-mark">N</span><span>Nithya<span className="brand-accent">Seva</span></span></a>
         <p>Every skill has value. Every worker deserves opportunity.</p>
         <span className="footer-copy">© {new Date().getFullYear()} NithyaSeva</span>
       </footer>
