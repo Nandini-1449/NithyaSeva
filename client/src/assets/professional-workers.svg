@@ -1,79 +1,74 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 440" role="img" aria-labelledby="title desc">
-  <title id="title">Professional skilled workers</title>
-  <desc id="desc">A confident team of adult service professionals representing home services, technical work, and community care.</desc>
-  <defs>
-    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#eef5e9"/><stop offset="1" stop-color="#dcebd9"/></linearGradient>
-    <linearGradient id="shirt" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#39845a"/><stop offset="1" stop-color="#236343"/></linearGradient>
-  </defs>
-  <rect width="720" height="440" rx="28" fill="url(#bg)"/>
-  <circle cx="590" cy="84" r="38" fill="#d0e4b5"/>
-  <circle cx="116" cy="118" r="26" fill="#d0e4b5" opacity=".8"/>
-  <path d="M42 355 Q180 300 360 350 T678 345 L720 440H0Z" fill="#c6ddc0"/>
-  <path d="M75 355 Q180 320 280 355" fill="none" stroke="#a8cba6" stroke-width="3" stroke-linecap="round"/>
-  <path d="M445 354 Q545 310 660 350" fill="none" stroke="#a8cba6" stroke-width="3" stroke-linecap="round"/>
-  <!-- Professional on the left: technician -->
-  <g transform="translate(108 78)">
-    <ellipse cx="94" cy="318" rx="70" ry="10" fill="#a6c7a1" opacity=".7"/>
-    <path d="M48 154 Q50 126 76 122 L116 122 Q142 129 145 158 L160 260 L30 260Z" fill="#f8fbf5"/>
-    <path d="M48 154 Q50 126 76 122 L116 122 Q142 129 145 158 L151 205 L39 205Z" fill="#2f7651"/>
-    <path d="M70 125 L94 155 L119 125" fill="#f5f7ef" stroke="#dce8d8" stroke-width="3"/>
-    <path d="M91 157 L91 242" stroke="#d5e5d1" stroke-width="3"/>
-    <rect x="60" y="188" width="65" height="42" rx="5" fill="#f2f6ed"/>
-    <path d="M70 202 H114 M70 213 H103" stroke="#91b79a" stroke-width="3" stroke-linecap="round"/>
-    <path d="M46 158 L20 220 Q17 229 26 234 L39 240 L72 180" fill="#2f7651"/>
-    <path d="M141 158 L163 212 Q168 224 156 231 L143 235 L117 180" fill="#2f7651"/>
-    <path d="M26 234 L42 240 L50 229 L35 218Z" fill="#d59a73"/>
-    <path d="M153 231 L166 224 L171 235 L159 243Z" fill="#d59a73"/>
-    <path d="M59 260 L57 309 L83 309 L96 265 M103 265 L119 309 L145 309 L132 260" fill="#253f36"/>
-    <path d="M54 307 H84 Q90 307 90 316 V321 H46 V315Q46 307 54 307 M119 307 H145 Q153 307 153 315 V321 H111V315Q111 307 119 307" fill="#334a42"/>
-    <rect x="72" y="74" width="57" height="62" rx="22" fill="#b97850"/>
-    <path d="M69 94 Q61 55 96 48 Q130 46 136 80 L130 92 Q118 75 96 76 Q82 78 69 94" fill="#253d32"/>
-    <path d="M69 93 Q62 74 72 62 L80 80Z" fill="#253d32"/>
-    <path d="M83 102 Q96 109 111 102" fill="none" stroke="#754b38" stroke-width="3" stroke-linecap="round"/>
-  </g>
-  <!-- Professional in the center: service coordinator -->
-  <g transform="translate(276 48)">
-    <ellipse cx="93" cy="348" rx="75" ry="11" fill="#a6c7a1" opacity=".7"/>
-    <path d="M40 157 Q45 124 75 121 H116 Q146 127 150 158 L164 275 H26Z" fill="#f9fbf6"/>
-    <path d="M41 157 Q45 124 75 121 H116 Q146 127 150 158 L158 221 H32Z" fill="url(#shirt)"/>
-    <path d="M74 124 L95 153 L117 124" fill="#f6f8f0"/>
-    <path d="M95 153 V253" stroke="#b6d6b6" stroke-width="3"/>
-    <rect x="105" y="188" width="35" height="45" rx="4" fill="#e9f2e5"/>
-    <path d="M112 199 H132 M112 209 H132 M112 219 H127" stroke="#6c9d79" stroke-width="2.5" stroke-linecap="round"/>
-    <path d="M44 158 L15 217 Q10 228 22 236 L34 242 L68 180" fill="#2b6d49"/>
-    <path d="M147 158 L173 210 Q179 222 166 231 L153 238 L126 181" fill="#2b6d49"/>
-    <path d="M21 235 L37 242 L45 231 L30 220Z" fill="#c98c65"/>
-    <path d="M162 230 L176 222 L181 233 L168 242Z" fill="#c98c65"/>
-    <path d="M58 275 L55 329 L82 329 L95 280 M104 280 L118 329 L145 329 L132 275" fill="#2b4038"/>
-    <path d="M52 327 H82 Q90 327 90 336 V342 H43 V336Q43 327 52 327 M118 327 H146 Q154 327 154 336 V342 H110V336Q110 327 118 327" fill="#334a42"/>
-    <rect x="70" y="68" width="57" height="63" rx="23" fill="#d99a70"/>
-    <path d="M65 92 Q58 43 96 41 Q135 43 134 89 L127 101 Q118 72 96 72 Q79 74 65 92" fill="#3d2e28"/>
-    <path d="M65 84 Q58 70 70 57 L80 79Z" fill="#3d2e28"/>
-    <path d="M83 100 Q97 108 111 100" fill="none" stroke="#8c5944" stroke-width="3" stroke-linecap="round"/>
-  </g>
-  <!-- Professional on the right: home service specialist -->
-  <g transform="translate(452 85)">
-    <ellipse cx="88" cy="311" rx="66" ry="10" fill="#a6c7a1" opacity=".7"/>
-    <path d="M42 153 Q46 126 73 121 H111 Q138 127 143 155 L157 255 H27Z" fill="#f9fbf6"/>
-    <path d="M42 153 Q46 126 73 121 H111 Q138 127 143 155 L150 213 H34Z" fill="#d5a75d"/>
-    <path d="M73 124 L91 151 L112 124" fill="#fff8e9"/>
-    <path d="M91 152 V237" stroke="#f2d9a4" stroke-width="3"/>
-    <rect x="53" y="188" width="34" height="34" rx="4" fill="#fff7e8"/>
-    <path d="M61 197 H79 M61 206 H76" stroke="#c9a05c" stroke-width="2.5" stroke-linecap="round"/>
-    <path d="M43 157 L19 209 Q13 222 25 230 L37 236 L67 178" fill="#d5a75d"/>
-    <path d="M140 157 L162 211 Q166 222 154 230 L141 236 L116 179" fill="#d5a75d"/>
-    <path d="M24 229 L39 236 L47 225 L33 215Z" fill="#9a6348"/>
-    <path d="M151 229 L164 222 L169 233 L157 240Z" fill="#9a6348"/>
-    <path d="M56 255 L53 302 L78 302 L91 260 M100 260 L114 302 L139 302 L128 255" fill="#344a40"/>
-    <path d="M50 300 H78 Q86 300 86 309 V315 H41 V309Q41 300 50 300 M114 300 H140 Q148 300 148 309 V315 H106V309Q106 300 114 300" fill="#334a42"/>
-    <rect x="67" y="70" width="54" height="59" rx="22" fill="#9b6347"/>
-    <path d="M63 89 Q60 49 94 47 Q128 48 128 84 L122 97 Q111 73 94 74 Q77 74 63 89" fill="#262f2a"/>
-    <path d="M66 82 Q61 67 72 56 L79 77Z" fill="#262f2a"/>
-    <path d="M81 99 Q94 106 108 99" fill="none" stroke="#704632" stroke-width="3" stroke-linecap="round"/>
-  </g>
-  <!-- subtle trust mark -->
-  <g transform="translate(565 35)">
-    <circle cx="25" cy="25" r="24" fill="#fff" opacity=".92"/>
-    <path d="M14 25 L22 33 L37 16" fill="none" stroke="#24784d" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
-  </g>
+<title id="title">Professional home service tools</title>
+<desc id="desc">A polished still life of a toolbox, maintenance tools, cleaning supplies, folded towels, gloves and a green plant. No people.</desc>
+<defs>
+ <linearGradient id="wall" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#f8faf5"/><stop offset="1" stop-color="#e3efdf"/></linearGradient>
+ <linearGradient id="wood" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#e5c49a"/><stop offset="1" stop-color="#c79a68"/></linearGradient>
+ <linearGradient id="case" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#334b50"/><stop offset="1" stop-color="#1c3037"/></linearGradient>
+ <linearGradient id="bottle" x1="0" y1="0" x2="1" y2="0"><stop stop-color="#dff7f4"/><stop offset=".5" stop-color="#fff"/><stop offset="1" stop-color="#b5e5df"/></linearGradient>
+</defs>
+<rect width="720" height="440" rx="26" fill="url(#wall)"/>
+<circle cx="110" cy="78" r="48" fill="#d7e8ce" opacity=".55"/>
+<circle cx="610" cy="65" r="74" fill="#d1e4c8" opacity=".42"/>
+<path d="M0 326 Q155 296 320 329 T720 310 V440H0Z" fill="#d6e4d0"/>
+<path d="M0 367 Q180 340 360 365 T720 350 V440H0Z" fill="url(#wood)"/>
+<path d="M0 387 Q180 365 360 386 T720 373" fill="none" stroke="#b88857" stroke-width="2" opacity=".5"/>
+<!-- plant -->
+<g transform="translate(500 25)">
+ <path d="M56 250 C45 177 50 109 78 58" stroke="#487c4e" stroke-width="6" fill="none" stroke-linecap="round"/>
+ <path d="M62 171 C2 156 -9 118 1 89 C38 93 68 125 62 171Z" fill="#5b9b5c"/>
+ <path d="M70 132 C107 87 144 91 163 103 C150 143 108 158 70 132Z" fill="#83b86a"/>
+ <path d="M67 96 C40 60 51 29 72 8 C100 35 97 69 67 96Z" fill="#3c8050"/>
+ <path d="M63 204 C22 194 8 167 13 146 C48 149 69 174 63 204Z" fill="#77ac63"/>
+ <path d="M78 188 C112 153 143 159 158 171 C141 202 108 211 78 188Z" fill="#4c9255"/>
+ <path d="M26 238 L111 238 L100 292 Q68 310 38 292Z" fill="#f8f7ee"/>
+ <ellipse cx="68" cy="238" rx="43" ry="10" fill="#e6e8dc"/>
+ <path d="M38 266 Q68 276 101 266" stroke="#d4d9ca" stroke-width="3" fill="none"/>
+</g>
+<!-- toolbox -->
+<g transform="translate(300 215)">
+ <ellipse cx="135" cy="142" rx="151" ry="17" fill="#9db89a" opacity=".45"/>
+ <path d="M38 25 L67 0 H176 L203 25" fill="none" stroke="#2c4247" stroke-width="14" stroke-linecap="round" stroke-linejoin="round"/>
+ <rect x="0" y="24" width="240" height="118" rx="13" fill="url(#case)"/>
+ <path d="M0 55 H240" stroke="#51666a" stroke-width="5"/>
+ <rect x="97" y="45" width="47" height="19" rx="5" fill="#e9b94f"/>
+ <rect x="107" y="50" width="27" height="8" rx="3" fill="#fff0bc"/>
+ <path d="M22 80 H218" stroke="#17282e" stroke-width="3" opacity=".6"/>
+ <rect x="17" y="92" width="35" height="29" rx="5" fill="#263c42"/>
+ <path d="M28 98 V115 M38 98 V115" stroke="#829395" stroke-width="3"/>
+ <rect x="187" y="92" width="35" height="29" rx="5" fill="#263c42"/>
+ <path d="M198 98 V115 M208 98 V115" stroke="#829395" stroke-width="3"/>
+</g>
+<!-- tools rising from toolbox -->
+<g stroke-linecap="round" stroke-linejoin="round">
+ <path d="M365 236 L345 126" stroke="#e6b94c" stroke-width="16"/>
+ <path d="M345 126 L334 100 L359 96 L369 122Z" fill="#334a50"/>
+ <path d="M405 237 L430 115" stroke="#315d82" stroke-width="17"/>
+ <path d="M414 146 L446 128 L454 138 L427 159Z" fill="#a7b8b7"/>
+ <path d="M466 237 L482 145" stroke="#e3b94d" stroke-width="15"/>
+ <path d="M472 146 L490 113 L501 119 L490 151Z" fill="#354a50"/>
+</g>
+<!-- cleaning spray -->
+<g transform="translate(190 164)">
+ <path d="M32 31 H66 V51 H32Z" fill="#287a67"/>
+ <path d="M45 28 V12 H72 L87 20 L82 31 H63" fill="#287a67"/>
+ <rect x="21" y="46" width="66" height="145" rx="15" fill="url(#bottle)" stroke="#a6d5ce" stroke-width="2"/>
+ <rect x="29" y="94" width="50" height="61" rx="6" fill="#e2f4ee"/>
+ <path d="M38 108 H69 M38 119 H64 M38 130 H68" stroke="#4a9d8a" stroke-width="3" stroke-linecap="round"/>
+ <path d="M21 174 Q54 185 87 174" stroke="#b4e0d8" stroke-width="3" fill="none"/>
+</g>
+<!-- folded towels -->
+<g transform="translate(525 333)">
+ <rect x="0" y="33" width="155" height="39" rx="9" fill="#f8f8f2"/>
+ <path d="M13 46 H142 M13 57 H142" stroke="#dce5dc" stroke-width="3"/>
+ <rect x="18" y="0" width="137" height="41" rx="9" fill="#72b6ad"/>
+ <path d="M30 13 H143 M30 25 H143" stroke="#a8d8d0" stroke-width="3"/>
+</g>
+<!-- gloves -->
+<g transform="translate(155 337) rotate(-10)">
+ <path d="M8 44 C0 36 4 23 12 24 L22 28 L24 4 Q25 -3 31 1 L35 24 L41 0 Q44 -5 49 2 L49 25 L58 6 Q63 1 67 9 L64 33 L75 22 Q82 19 84 28 L75 55 Q65 76 38 72 L20 64Z" fill="#e7bd45" stroke="#c69a2d" stroke-width="2"/>
+ <path d="M21 40 L29 60 M42 38 L45 61 M61 37 L58 56" stroke="#f8d978" stroke-width="3" fill="none" stroke-linecap="round"/>
+</g>
+<!-- small sparkle accents -->
+<g fill="#5b9362"><circle cx="125" cy="290" r="4"/><circle cx="144" cy="279" r="3"/><circle cx="272" cy="106" r="4"/></g>
 </svg>
