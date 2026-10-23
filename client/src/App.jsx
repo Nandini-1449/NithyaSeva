@@ -1,4 +1,5 @@
 import './App.css'
+import professionalWorkers from './assets/professional-workers.svg'
 
 const services = [
   {
@@ -69,10 +70,11 @@ function App() {
           <div className="art-card">
             <div className="art-card-top"><span className="art-mini-mark">N</span><span className="art-status">Community first</span></div>
             <div className="art-illustration">
-              <div className="person person-one"><span className="person-head" /><span className="person-body" /></div>
-              <div className="person person-two"><span className="person-head" /><span className="person-body" /></div>
-              <div className="person person-three"><span className="person-head" /><span className="person-body" /></div>
-              <div className="ground" />
+              <img
+                className="professional-workers-image"
+                src={professionalWorkers}
+                alt="Professional adult service workers representing skilled work and community support"
+              />
             </div>
             <div className="art-card-bottom"><div><strong>Skills connect us.</strong><span>Opportunity empowers us.</span></div><span className="art-arrow">↗</span></div>
           </div>
