@@ -61,23 +61,17 @@ function App() {
             <span>Built for workers. Designed for a stronger community.</span>
           </div>
         </div>
-        <div className="hero-art" aria-label="Illustration representing a connected community">
+        <div className="hero-art" aria-label="Professional service tools arranged in a floating composition">
           <div className="art-orbit orbit-one" />
           <div className="art-orbit orbit-two" />
           <div className="art-sun" />
           <div className="art-leaf leaf-one" />
           <div className="art-leaf leaf-two" />
-          <div className="art-card">
-            <div className="art-card-top"><span className="art-mini-mark">N</span><span className="art-status">Community first</span></div>
-            <div className="art-illustration">
-              <img
-                className="professional-workers-image"
-                src={professionalWorkers}
-                alt="Professional adult service workers representing skilled work and community support"
-              />
-            </div>
-            <div className="art-card-bottom"><div><strong>Skills connect us.</strong><span>Opportunity empowers us.</span></div><span className="art-arrow">↗</span></div>
-          </div>
+          <img
+            className="professional-workers-image"
+            src={professionalWorkers}
+            alt="Professional toolbox, maintenance tools, cleaning supplies, gloves, folded towels and a plant"
+          />
           <div className="floating-chip chip-top"><span className="chip-icon">✦</span><span><strong>Every skill matters</strong><small>Every worker counts</small></span></div>
           <div className="floating-chip chip-bottom"><span className="chip-icon chip-check">✓</span><span><strong>Built on trust</strong><small>Clear and transparent</small></span></div>
         </div>
