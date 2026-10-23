@@ -186,7 +186,7 @@ function App() {
               </p>
               <div className="hero-actions">
                 <button className="primary-button" type="button" onClick={() => openAuth('register')}>Register <span aria-hidden="true">↗</span></button>
-                <button className="text-button" type="button" onClick={() => openAuth('login')}>Login <span aria-hidden="true">→</span></button>
+                <button className="primary-button" type="button" onClick={() => openAuth('login') }>Login <span aria-hidden="true">→</span></button>
               </div>
               <div className="hero-note">
                 <span className="note-check">✓</span>
