@@ -55,7 +55,7 @@ h1 span, h2 span { color: var(--green); }
 .art-leaf { position: absolute; background: #8db98e; border-radius: 100% 0 100% 0; opacity: .75; }
 .leaf-one { width: 22px; height: 43px; left: 45px; top: 100px; transform: rotate(-35deg); }
 .leaf-two { width: 15px; height: 30px; right: 44px; bottom: 65px; transform: rotate(35deg); }
-.art-card { width: min(330px, 75%); background: #fff; border: 1px solid #e1eadc; box-shadow: 0 22px 60px #264e3015; border-radius: 20px; padding: 19px; z-index: 1; }
+.professional-workers-image { display: block; position: relative; z-index: 1; width: min(470px, 100%); height: auto; object-fit: contain; overflow: visible; filter: drop-shadow(0 24px 24px #264e3020); transform: rotate(-2deg); transition: transform .35s ease, filter .35s ease; }\n.hero-art:hover .professional-workers-image { transform: translateY(-5px) rotate(0deg); filter: drop-shadow(0 30px 28px #264e3026); }
 .art-card-top, .art-card-bottom { display: flex; align-items: center; justify-content: space-between; }
 .art-card-top { padding-bottom: 13px; border-bottom: 1px solid #edf1e9; }
 .art-mini-mark { display: grid; place-items: center; width: 26px; height: 26px; border-radius: 8px 8px 8px 3px; color: white; background: var(--green); font-weight: 800; }
@@ -79,8 +79,8 @@ h1 span, h2 span { color: var(--green); }
 .art-card-bottom div span { font-size: 10px; color: #7b897e; }
 .art-arrow { display: grid; place-items: center; width: 30px; height: 30px; border-radius: 50%; background: #edf5e9; color: var(--green); }
 .floating-chip { position: absolute; display: flex; align-items: center; gap: 10px; padding: 12px 15px; background: #fff; border: 1px solid #e5ece1; box-shadow: 0 10px 30px #264e3010; border-radius: 12px; z-index: 2; }
-.chip-top { top: 68px; left: -2px; }
-.chip-bottom { bottom: 45px; right: -2px; }
+.chip-top { top: 72px; left: -12px; }
+.chip-bottom { bottom: 42px; right: -10px; }
 .chip-icon { width: 28px; height: 28px; display: grid; place-items: center; background: #f8efd7; color: #9c7731; border-radius: 8px; }
 .chip-check { background: #e7f2e3; color: var(--green); }
 .floating-chip span:last-child { display: flex; flex-direction: column; gap: 4px; }
