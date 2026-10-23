@@ -72,8 +72,6 @@ function App() {
             src={professionalWorkers}
             alt="Professional toolbox, maintenance tools, cleaning supplies, gloves, folded towels and a plant"
           />
-          <div className="floating-chip chip-top"><span className="chip-icon">✦</span><span><strong>Every skill matters</strong><small>Every worker counts</small></span></div>
-          <div className="floating-chip chip-bottom"><span className="chip-icon chip-check">✓</span><span><strong>Built on trust</strong><small>Clear and transparent</small></span></div>
         </div>
       </section>
 
