@@ -111,11 +111,7 @@ function App() {
           <a className={`nav-link ${!authPage ? 'active' : ''}`} href="#home" onClick={() => setAuthPage('')}>Home</a>
           <a className="nav-link" href="#services" onClick={() => setAuthPage('')}>Services</a>
           <a className="nav-link" href="#about" onClick={() => setAuthPage('')}>About us</a>
-          {!signedInUser ? (
-            <>
-
-            </>
-          ) : (
+          {signedInUser && (
             <>
               <span className="nav-user">Hi, {signedInUser.full_name}</span>
               <button className="nav-login" type="button" onClick={handleLogout}>Log out</button>
