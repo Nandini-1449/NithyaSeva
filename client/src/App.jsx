@@ -83,7 +83,8 @@ function App() {
       localStorage.setItem('nithyaseva_token', data.token)
       localStorage.setItem('nithyaseva_user', JSON.stringify(data.user))
       setSignedInUser(data.user)
-      setNotice(authPage === 'register' ? 'Your account has been created successfully.' : 'You are now logged in successfully.')
+      setAuthPage('')
+      setNotice('')
       setPassword('')
     } catch (requestError) {
       setError(requestError.message || 'Could not connect to the server. Make sure the NithyaSeva backend is running.')
