@@ -2,6 +2,8 @@ require("dotenv").config();
 const express = require("express");
 const pool = require("./db");
 const authRoutes = require("./routes/auth");
+const workerRoutes = require("./routes/workers");
+const jobRoutes = require("./routes/jobs");
 
 const app = express();
 const PORT = Number(process.env.PORT || 5000);
@@ -32,6 +34,8 @@ app.get("/api/health", async (req, res) => {
 });
 
 app.use("/api/auth", authRoutes);
+app.use("/api/workers", workerRoutes);
+app.use("/api/jobs", jobRoutes);
 
 app.use((req, res) => {
   res.status(404).json({ success: false, message: "API endpoint not found." });
