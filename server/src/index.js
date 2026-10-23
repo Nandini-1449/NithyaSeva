@@ -1,6 +1,7 @@
 require("dotenv").config();
 const express = require("express");
 const pool = require("./db");
+const authRoutes = require("./routes/auth");
 
 const app = express();
 const PORT = Number(process.env.PORT || 5000);
@@ -28,6 +29,12 @@ app.get("/api/health", async (req, res) => {
       message: "Backend is running, but the database is unavailable"
     });
   }
+});
+
+app.use("/api/auth", authRoutes);
+
+app.use((req, res) => {
+  res.status(404).json({ success: false, message: "API endpoint not found." });
 });
 
 app.listen(PORT, () => {
