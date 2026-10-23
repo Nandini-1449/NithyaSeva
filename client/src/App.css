@@ -163,3 +163,106 @@ h2 { font-size: clamp(32px, 4vw, 43px); line-height: 1.22; margin-bottom: 0; fon
 .services-section .service-grid > .service-card .service-link { color: #24784d !important; }
 .services-section .service-grid > .service-card .service-icon { background: #eaf3e9 !important; color: #24784d !important; }
 .services-section .service-grid > .service-card:hover { transform: translateY(-4px); box-shadow: 0 14px 35px #214a2910 !important; }
+
+
+/* Authentication screens */
+.nav-login {
+  border: 0;
+  background: transparent;
+  color: var(--green-dark);
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+  padding: 10px 2px;
+}
+.nav-login:hover { color: var(--green); }
+.nav-user { color: var(--green-dark); font-size: 12px; font-weight: 700; }
+.nav-cta { border: 0; font: inherit; font-weight: 700; cursor: pointer; }
+.auth-section {
+  max-width: 1120px;
+  min-height: 650px;
+  margin: 0 auto;
+  padding: 48px 32px 76px;
+  display: grid;
+  grid-template-columns: 1fr minmax(340px, 440px);
+  align-items: center;
+  gap: clamp(32px, 6vw, 82px);
+}
+.auth-decoration { min-width: 0; }
+.auth-decoration h1 { font-size: clamp(38px, 4.4vw, 56px); }
+.auth-decoration > p:not(.eyebrow) { color: var(--muted); line-height: 1.9; max-width: 440px; font-size: 14px; }
+.auth-decoration img { display: block; width: min(330px, 82%); max-height: 220px; object-fit: contain; object-position: left center; margin-top: 24px; }
+.auth-card {
+  width: 100%;
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  padding: 32px;
+  box-shadow: 0 18px 55px #214a290c;
+}
+.auth-card .eyebrow { margin-bottom: 10px; }
+.auth-card h2 { font-size: 30px; letter-spacing: -1.1px; margin-bottom: 8px; }
+.auth-subtitle { color: var(--muted); font-size: 13px; line-height: 1.7; margin-bottom: 22px; }
+.auth-form { display: flex; flex-direction: column; align-items: stretch; }
+.auth-form label { color: #344d40; font-size: 12px; font-weight: 700; margin: 13px 0 7px; }
+.optional-label { color: #819086; font-weight: 400; }
+.auth-form input, .auth-form select {
+  width: 100%;
+  min-height: 45px;
+  border: 1px solid #dfe7de;
+  border-radius: 8px;
+  padding: 11px 12px;
+  background: #fcfdfb;
+  color: var(--ink);
+  font: inherit;
+  font-size: 13px;
+  outline: none;
+}
+.auth-form input:focus, .auth-form select:focus { border-color: #66a77b; box-shadow: 0 0 0 3px #24784d18; }
+.auth-form input::placeholder { color: #a1aca4; }
+.auth-submit {
+  min-height: 47px;
+  margin-top: 22px;
+  border: 0;
+  border-radius: 8px;
+  padding: 12px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  background: var(--green);
+  color: white;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.auth-submit:hover { background: var(--green-dark); }
+.auth-submit:disabled { opacity: .65; cursor: wait; }
+.auth-switch { color: var(--muted); text-align: center; font-size: 12px; line-height: 1.7; margin: 20px 0 10px; }
+.auth-switch button, .back-home {
+  border: 0;
+  padding: 0;
+  background: transparent;
+  color: var(--green);
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+.back-home { display: block; margin: 16px auto 0; font-size: 12px; }
+.auth-message { padding: 11px 12px; border-radius: 8px; margin-bottom: 14px; font-size: 12px; line-height: 1.6; overflow-wrap: anywhere; }
+.success-message { background: #edf7eb; border: 1px solid #d7ead3; color: #245b35; }
+.error-message { background: #fff1ef; border: 1px solid #f2d5d0; color: #9b3025; }
+.service-link { width: 100%; border: 0; background: transparent; font: inherit; cursor: pointer; text-align: left; }
+@media (max-width: 850px) {
+  .auth-section { grid-template-columns: 1fr minmax(300px, 390px); gap: 24px; padding: 40px 24px 60px; }
+  .auth-card { padding: 26px; }
+  .site-header nav { flex-wrap: wrap; }
+}
+@media (max-width: 620px) {
+  .site-header nav { flex-wrap: wrap; justify-content: flex-start; column-gap: 16px; row-gap: 10px; }
+  .auth-section { grid-template-columns: 1fr; padding: 32px 20px 52px; gap: 20px; }
+  .auth-decoration img { display: none; }
+  .auth-decoration h1 { font-size: 39px; }
+  .auth-card { padding: 24px 20px; }
+}
