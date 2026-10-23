@@ -291,7 +291,7 @@ h2 { font-size: clamp(32px, 4vw, 43px); line-height: 1.22; margin-bottom: 0; fon
 }
 .nav-cta.active {
   background: var(--green-dark);
-  box-shadow: 0 0 0 3px #24784d25;
+  box-shadow: none;
 }
 .text-button {
   border: 0;
