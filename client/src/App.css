@@ -266,3 +266,40 @@ h2 { font-size: clamp(32px, 4vw, 43px); line-height: 1.22; margin-bottom: 0; fon
   .auth-decoration h1 { font-size: 39px; }
   .auth-card { padding: 24px 20px; }
 }
+
+
+/* Navigation highlights the current page/action only. */
+.nav-link.active {
+  color: var(--green);
+  position: relative;
+}
+.nav-link.active::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -9px;
+  height: 2px;
+  border-radius: 2px;
+  background: var(--green);
+}
+.nav-login.active {
+  color: var(--green);
+  background: var(--green-soft);
+  padding: 10px 12px;
+  border-radius: 8px;
+}
+.nav-cta.active {
+  background: var(--green-dark);
+  box-shadow: 0 0 0 3px #24784d25;
+}
+.text-button {
+  border: 0;
+  background: transparent;
+  padding: 0;
+  font: inherit;
+  font-weight: 700;
+  color: #426052;
+  cursor: pointer;
+}
+.text-button:hover { color: var(--green); }
