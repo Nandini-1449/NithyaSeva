@@ -151,11 +151,27 @@ function App() {
                 <label htmlFor="phone">Phone number <span className="optional-label">(optional)</span></label>
                 <input id="phone" name="phone" type="tel" autoComplete="tel" value={phone} onChange={e => setPhone(e.target.value)} placeholder="Enter your phone number" />
               </>}
-              <label htmlFor="role">{authPage === 'register' ? 'I want to join as' : 'Log in as'}</label>
-              <select id="role" name="role" value={role} onChange={e => setRole(e.target.value)}>
-                <option value="customer">Customer — find skilled workers</option>
-                <option value="worker">Worker — find job opportunities</option>
-              </select>
+              <label htmlFor="role">{authPage === 'register' ? 'Account type' : 'Log in as'}</label>
+              <div className="account-type-options" role="group" aria-label="Choose account type">
+                <button
+                  className={`account-type-option ${role === 'customer' ? 'selected' : ''}`}
+                  type="button"
+                  aria-pressed={role === 'customer'}
+                  onClick={() => setRole('customer')}
+                >
+                  <span className="account-type-title">Customer</span>
+                  <span className="account-type-description">Find skilled workers</span>
+                </button>
+                <button
+                  className={`account-type-option ${role === 'worker' ? 'selected' : ''}`}
+                  type="button"
+                  aria-pressed={role === 'worker'}
+                  onClick={() => setRole('worker')}
+                >
+                  <span className="account-type-title">Worker</span>
+                  <span className="account-type-description">Find job opportunities</span>
+                </button>
+              </div>
               <label htmlFor="password">Password</label>
               <input id="password" name="password" type="password" autoComplete={authPage === 'register' ? 'new-password' : 'current-password'} value={password} onChange={e => setPassword(e.target.value)} minLength={authPage === 'register' ? 8 : undefined} maxLength={72} required placeholder={authPage === 'register' ? 'At least 8 characters' : 'Enter your password'} />
               <button className="auth-submit" type="submit" disabled={busy}>
