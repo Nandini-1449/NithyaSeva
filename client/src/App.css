@@ -342,4 +342,4 @@ h2 { font-size: clamp(32px, 4vw, 43px); line-height: 1.22; margin-bottom: 0; fon
 
 
 /* Keep the login and registration submit buttons comfortably sized. */
-.auth-submit { width: auto; min-width: 120px; align-self: flex-start; padding-inline: 24px; }
+.auth-submit { width: auto; min-width: 120px; align-self: center; padding-inline: 24px; }
