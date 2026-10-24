@@ -303,3 +303,39 @@ h2 { font-size: clamp(32px, 4vw, 43px); line-height: 1.22; margin-bottom: 0; fon
   cursor: pointer;
 }
 .text-button:hover { color: var(--green); }
+
+
+/* Clear, clickable account-type choices on login and registration. */
+.account-type-options {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+.account-type-option {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 5px;
+  min-height: 76px;
+  padding: 13px 14px;
+  border: 1px solid #dfe7de;
+  border-radius: 10px;
+  background: #fcfdfb;
+  color: var(--ink);
+  text-align: left;
+  cursor: pointer;
+  transition: border-color .18s ease, background .18s ease, box-shadow .18s ease;
+}
+.account-type-option:hover {
+  border-color: #8fbc98;
+  background: #f7fbf5;
+}
+.account-type-option.selected {
+  border: 2px solid var(--green);
+  padding: 12px 13px;
+  background: #edf6eb;
+  box-shadow: 0 0 0 2px #24784d12;
+}
+.account-type-title { font-size: 13px; font-weight: 800; }
+.account-type-description { font-size: 10px; line-height: 1.5; color: var(--muted); }
+.account-type-option.selected .account-type-title { color: var(--green-dark); }
