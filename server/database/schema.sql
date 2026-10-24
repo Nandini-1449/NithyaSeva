@@ -8,7 +8,7 @@ BEGIN;
 CREATE TABLE IF NOT EXISTS users (
     id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     full_name VARCHAR(120) NOT NULL,
-    email VARCHAR(255) NOT NULL UNIQUE,
+    email VARCHAR(255) NOT NULL,
     password_hash TEXT NOT NULL,
     phone VARCHAR(25),
     role VARCHAR(20) NOT NULL DEFAULT 'customer'
@@ -18,6 +18,11 @@ CREATE TABLE IF NOT EXISTS users (
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
+
+CREATE UNIQUE INDEX IF NOT EXISTS users_email_role_customer_worker_uidx
+    ON users (lower(email), role) WHERE role IN ('customer', 'worker');
+CREATE UNIQUE INDEX IF NOT EXISTS users_email_admin_uidx
+    ON users (lower(email)) WHERE role = 'admin';
 
 CREATE TABLE IF NOT EXISTS worker_profiles (
     user_id BIGINT PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
