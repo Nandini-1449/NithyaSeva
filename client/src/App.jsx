@@ -66,7 +66,7 @@ function App() {
     const endpoint = authPage === 'register' ? 'register' : 'login'
     const payload = authPage === 'register'
       ? { fullName, email, phone, password, role }
-      : { email, password }
+      : { email, password, role }
 
     try {
       const response = await fetch(`http://localhost:5000/api/auth/${endpoint}`, {
@@ -150,11 +150,13 @@ function App() {
               {authPage === 'register' && <>
                 <label htmlFor="phone">Phone number <span className="optional-label">(optional)</span></label>
                 <input id="phone" name="phone" type="tel" autoComplete="tel" value={phone} onChange={e => setPhone(e.target.value)} placeholder="Enter your phone number" />
-                <label htmlFor="role">I want to join as</label>
-                <select id="role" name="role" value={role} onChange={e => setRole(e.target.value)}>
-                  <option value="customer">Customer — find skilled workers</option>
-                  <option value="worker">Worker — find job opportunities</option>
-                </select>
+              </>}
+              <label htmlFor="role">{authPage === 'register' ? 'I want to join as' : 'Log in as'}</label>
+              <select id="role" name="role" value={role} onChange={e => setRole(e.target.value)}>
+                <option value="customer">Customer — find skilled workers</option>
+                <option value="worker">Worker — find job opportunities</option>
+              </select>
+              {authPage === 'register' && <>
               </>}
               <label htmlFor="password">Password</label>
               <input id="password" name="password" type="password" autoComplete={authPage === 'register' ? 'new-password' : 'current-password'} value={password} onChange={e => setPassword(e.target.value)} minLength={authPage === 'register' ? 8 : undefined} maxLength={72} required placeholder={authPage === 'register' ? 'At least 8 characters' : 'Enter your password'} />
