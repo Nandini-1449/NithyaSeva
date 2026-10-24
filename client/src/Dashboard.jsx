@@ -149,4 +149,6 @@ export default function Dashboard({ user, onLogout }) {
   </section>
 }
 
-function capitalizeText(value) { return value.replace(/(^|[.!?]\s+)([a-z])/g, (match, boundary, letter) => boundary + letter.toUpperCase()) }\n\nfunction Empty({ text }) { return <div className="dash-empty"><span>✳</span><p>{text}</p></div> }
+function capitalizeText(value) { return value.replace(/(^|[.!?]\s+)([a-z])/g, (match, boundary, letter) => boundary + letter.toUpperCase()) }
+
+function Empty({ text }) { return <div className="dash-empty"><span>✳</span><p>{text}</p></div> }
