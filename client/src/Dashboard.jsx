@@ -56,12 +56,30 @@ export default function Dashboard({ user, onLogout }) {
 
   async function act(fn, successText) {
     setMessage(''); setError('')
-    try { await fn(); setMessage(successText); await load() } catch (e) { setError(e.message) }
+    try {
+      await fn()
+      setMessage(successText)
+      await load()
+      return true
+    } catch (e) {
+      setError(e.message || 'Something went wrong. Please try again.')
+      return false
+    }
   }
 
   async function createJob(e) {
     e.preventDefault()
-    await act(() => request('/jobs', { method: 'POST', body: JSON.stringify({ ...jobForm, budget: jobForm.budget === '' ? null : Number(jobForm.budget) }) }), 'Your job has been posted.')
+    const posted = await act(
+      () => request('/jobs', {
+        method: 'POST',
+        body: JSON.stringify({
+          ...jobForm,
+          budget: jobForm.budget === '' ? null : Number(jobForm.budget),
+        }),
+      }),
+      'Your job has been posted.'
+    )
+    if (!posted) return
     setJobForm({ title: '', description: '', category: 'Home services', serviceLocation: '', budget: '' })
     setSection('myjobs')
   }
