@@ -86,10 +86,26 @@ export default function Dashboard({ user, onLogout }) {
   }
 
   async function apply(jobId) {
-    const price = window.prompt('Your proposed price in INR (leave blank to use the customer budget):', '')
-    if (price === null) return
-    const note = window.prompt('Short message to the customer (optional):', '') || ''
-    await act(() => request('/jobs/' + jobId + '/applications', { method: 'POST', body: JSON.stringify({ proposedPrice: price.trim() ? Number(price) : null, message: note }) }), 'Your application has been sent.')
+    setApplyForm({ jobId: String(jobId), proposedPrice: '', message: '' })
+    setError('')
+    setMessage('')
+  }
+
+  async function submitApplication(e, jobId) {
+    e.preventDefault()
+    const price = applyForm.proposedPrice.trim()
+    if (price && (!Number.isFinite(Number(price)) || Number(price) < 0)) {
+      setError('Enter a valid non-negative proposed price, or leave it blank.')
+      return
+    }
+    const sent = await act(
+      () => request('/jobs/' + jobId + '/applications', {
+        method: 'POST',
+        body: JSON.stringify({ proposedPrice: price ? Number(price) : null, message: capitalizeText(applyForm.message) })
+      }),
+      'Your application has been sent.'
+    )
+    if (sent) setApplyForm({ jobId: '', proposedPrice: '', message: '' })
   }
 
   async function showApplications(jobId) {
@@ -135,7 +151,7 @@ export default function Dashboard({ user, onLogout }) {
 
     {section === 'workers' && user.role === 'customer' && <div className="dash-grid">{workers.filter(w => !search || (w.full_name + ' ' + (w.skills || []).join(' ') + ' ' + (w.service_area || '')).toLowerCase().includes(search.toLowerCase())).map(w => <article className="dash-card" key={w.id}><div className="dash-card-icon">✦</div><h3>{w.full_name}</h3><p>{w.bio || 'Skilled local service professional'}</p><p><b>Skills:</b> {(w.skills || []).join(', ') || 'Not added yet'}</p><p><b>Area:</b> {w.service_area || 'Not specified'}</p><p><b>Experience:</b> {w.experience_years || 0} years</p><p><b>Rate:</b> {money(w.hourly_rate)}</p><span className={'status-pill ' + (w.availability_status === 'available' ? 'available' : '')}>{w.availability_status || 'unavailable'}</span></article>)}{!workers.length && <Empty text="No worker profiles yet. Check back after workers complete their profiles." />}</div>}
 
-    {section === 'jobs' && <div className="dash-grid">{jobs.filter(j => !search || (j.title + ' ' + j.description + ' ' + j.category).toLowerCase().includes(search.toLowerCase())).map(j => <article className="dash-card" key={j.id}><span className="status-pill">{j.status}</span><h3>{j.title}</h3><p>{j.description}</p><p><b>Category:</b> {j.category}</p><p><b>Location:</b> {j.service_location}</p><p><b>Budget:</b> {money(j.budget)}</p><p><b>Workers needed:</b> {j.worker_count || 1}</p><p className="dash-muted">Posted by {j.customer_name || 'Customer'} · {new Date(j.created_at).toLocaleDateString()}</p>{user.role === 'worker' && <button className="dash-primary" onClick={() => apply(j.id)}>Apply for this job ↗</button>}</article>)}{!jobs.length && <Empty text="No open jobs at the moment. Please check back later." />}</div>}
+    {section === 'jobs' && <div className="dash-grid">{jobs.filter(j => !search || (j.title + ' ' + j.description + ' ' + j.category).toLowerCase().includes(search.toLowerCase())).map(j => <article className="dash-card" key={j.id}><span className="status-pill">{j.status}</span><h3>{j.title}</h3><p>{j.description}</p><p><b>Category:</b> {j.category}</p><p><b>Location:</b> {j.service_location}</p><p><b>Budget:</b> {money(j.budget)}</p><p><b>Workers needed:</b> {j.worker_count || 1}</p><p className="dash-muted">Posted by {j.customer_name || 'Customer'} · {new Date(j.created_at).toLocaleDateString()}</p>{user.role === 'worker' && (applyForm.jobId === String(j.id) ? <form className="dash-form application-form" onSubmit={e => submitApplication(e, j.id)}><h4>Apply for this job</h4><label>Proposed price in INR (optional)<input type="number" min="0" step="0.01" value={applyForm.proposedPrice} onChange={e => setApplyForm({ ...applyForm, proposedPrice: e.target.value })} placeholder="Leave blank to use the customer budget" /></label><label>Short message to the customer (optional)<textarea rows="3" maxLength="1500" spellCheck="true" value={applyForm.message} onChange={e => setApplyForm({ ...applyForm, message: capitalizeText(e.target.value) })} onBlur={e => e.target.value && setApplyForm(f => ({ ...f, message: capitalizeText(e.target.value) }))} placeholder="Describe how you can help with this job" /></label><div className="application-form-actions"><button className="dash-primary" type="submit" disabled={loading}>Send application</button><button className="dash-secondary" type="button" onClick={() => setApplyForm({ jobId: '', proposedPrice: '', message: '' })}>Cancel</button></div></form> : <button className="dash-primary" onClick={() => apply(j.id)}>Apply for this job ↗</button>)}</article>)}{!jobs.length && <Empty text="No open jobs at the moment. Please check back later." />}</div>}
 
     {section === 'post' && user.role === 'customer' && <form className="dash-form" onSubmit={createJob}><h2>Post a new job</h2><p>Describe the work clearly so workers can decide whether to apply.</p><label>Job title<input required maxLength="160" spellCheck="true" value={jobForm.title} onChange={e => setJobForm({ ...jobForm, title: capitalizeText(e.target.value) })} onBlur={e => e.target.value && setJobForm(f => ({ ...f, title: capitalizeText(e.target.value) }))} placeholder="e.g. Repair a leaking kitchen tap" /></label><label>Category<select required value={jobForm.category} onChange={e => setJobForm({ ...jobForm, category: e.target.value })}>{['Household services','Society / apartment services','Construction and building work','Plumbing','Electrical work','Cleaning and housekeeping','Painting','Carpentry','Gardening and outdoor work','Moving and loading','Security services','Elderly care and assistance','Other services'].map(category => <option key={category} value={category}>{category}</option>)}</select></label><label>Work description<textarea required maxLength="10000" rows="4" spellCheck="true" value={jobForm.description} onChange={e => setJobForm({ ...jobForm, description: capitalizeText(e.target.value) })} onBlur={e => e.target.value && setJobForm(f => ({ ...f, description: capitalizeText(e.target.value) }))} /></label><label>Service location<input required maxLength="1000" spellCheck="true" value={jobForm.serviceLocation} onChange={e => setJobForm({ ...jobForm, serviceLocation: capitalizeText(e.target.value) })} onBlur={e => e.target.value && setJobForm(f => ({ ...f, serviceLocation: capitalizeText(e.target.value) }))} placeholder="Area or locality" /></label><label>Number of workers needed<input required type="number" min="1" max="10000" step="1" value={jobForm.workerCount} onChange={e => setJobForm({ ...jobForm, workerCount: e.target.value })} /></label><label>Budget in INR (optional)<input type="number" min="0" step="0.01" value={jobForm.budget} onChange={e => setJobForm({ ...jobForm, budget: e.target.value })} /></label><button className="dash-primary" disabled={loading}>Publish job</button></form>}
 
