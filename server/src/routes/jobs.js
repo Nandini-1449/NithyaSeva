@@ -50,12 +50,13 @@ router.post("/", requireAuth, requireRole("customer"), async (req, res) => {
   const client = await pool.connect();
   try {
     await client.query("BEGIN");
+    const categorySlug = category.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "service";
     const categoryResult = await client.query(
       `INSERT INTO service_categories (name, slug)
-       VALUES ($1, trim(both '-' FROM regexp_replace(lower($1), '[^a-z0-9]+', '-', 'g')))
+       VALUES ($1, $2 || '-' || substr(md5($1), 1, 8))
        ON CONFLICT (name) DO UPDATE SET name = EXCLUDED.name
        RETURNING id`,
-      [category]
+      [category, categorySlug]
     );
     const result = await client.query(
       `INSERT INTO jobs (customer_id, title, description, category, category_id, service_location, budget, scheduled_for)
