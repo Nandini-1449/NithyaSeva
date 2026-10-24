@@ -156,8 +156,6 @@ function App() {
                 <option value="customer">Customer — find skilled workers</option>
                 <option value="worker">Worker — find job opportunities</option>
               </select>
-              {authPage === 'register' && <>
-              </>}
               <label htmlFor="password">Password</label>
               <input id="password" name="password" type="password" autoComplete={authPage === 'register' ? 'new-password' : 'current-password'} value={password} onChange={e => setPassword(e.target.value)} minLength={authPage === 'register' ? 8 : undefined} maxLength={72} required placeholder={authPage === 'register' ? 'At least 8 characters' : 'Enter your password'} />
               <button className="auth-submit" type="submit" disabled={busy}>
