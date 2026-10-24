@@ -65,7 +65,7 @@ router.post("/register", async (req, res) => {
   } catch (error) {
     if (client) await client.query("ROLLBACK").catch(() => {});
     if (error.code === "23505") {
-      return res.status(409).json({ success: false, message: "An account with this email already exists." });
+      return res.status(409).json({ success: false, message: "An account of this type with this email already exists. You can use the other account type with the same email." });
     }
     if (error.message && error.message.includes("JWT_SECRET")) {
       return res.status(500).json({ success: false, message: "Server authentication is not configured yet." });
@@ -80,15 +80,16 @@ router.post("/register", async (req, res) => {
 router.post("/login", async (req, res) => {
   const email = typeof req.body.email === "string" ? req.body.email.trim().toLowerCase() : "";
   const password = typeof req.body.password === "string" ? req.body.password : "";
+  const role = req.body.role === "worker" ? "worker" : req.body.role === "customer" ? "customer" : null;
 
-  if (!email || !password) {
-    return res.status(400).json({ success: false, message: "Email and password are required." });
+  if (!email || !password || !role) {
+    return res.status(400).json({ success: false, message: "Email, password, and account type are required." });
   }
 
   try {
     const result = await pool.query(
-      "SELECT id, full_name, email, phone, role, account_status, password_hash FROM users WHERE email = $1",
-      [email]
+      "SELECT id, full_name, email, phone, role, account_status, password_hash FROM users WHERE email = $1 AND role = $2",
+      [email, role]
     );
     const user = result.rows[0];
     if (!user || !(await bcrypt.compare(password, user.password_hash))) {
