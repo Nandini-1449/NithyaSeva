@@ -15,7 +15,7 @@ export default function Dashboard({ user, onLogout }) {
   const [message, setMessage] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
-  const [jobForm, setJobForm] = useState({ title: '', description: '', category: 'Home services', serviceLocation: '', budget: '' })
+  const [jobForm, setJobForm] = useState({ title: '', description: '', category: 'Household services', serviceLocation: '', budget: '', workerCount: '1' })
   const [applyForm, setApplyForm] = useState({ jobId: '', proposedPrice: '', message: '' })
 
   const request = useCallback(async (path, options = {}) => {
@@ -75,6 +75,7 @@ export default function Dashboard({ user, onLogout }) {
         body: JSON.stringify({
           ...jobForm,
           budget: jobForm.budget === '' ? null : Number(jobForm.budget),
+          workerCount: Number(jobForm.workerCount || 1),
         }),
       }),
       'Your job has been posted.'
