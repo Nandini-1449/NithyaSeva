@@ -16,7 +16,7 @@ router.get("/", async (req, res) => {
   try {
     const result = await pool.query(
       `SELECT j.id, j.title, j.description, j.category, j.category_id, j.service_location,
-              j.budget, j.scheduled_for, j.status, j.created_at, j.updated_at,
+              j.budget, j.scheduled_for, j.worker_count, j.status, j.created_at, j.updated_at,
               u.id AS customer_id, u.full_name AS customer_name
        FROM jobs j JOIN users u ON u.id = j.customer_id
        WHERE ($1 = 'all' OR j.status = $1)
@@ -84,7 +84,7 @@ router.post("/", requireAuth, requireRole("customer"), async (req, res) => {
 router.get("/mine", requireAuth, requireRole("customer"), async (req, res) => {
   try {
     const result = await pool.query(
-      "SELECT id, title, description, category, service_location, budget, scheduled_for, status, created_at, updated_at FROM jobs WHERE customer_id = $1 ORDER BY created_at DESC",
+      "SELECT id, title, description, category, service_location, budget, scheduled_for, worker_count, status, created_at, updated_at FROM jobs WHERE customer_id = $1 ORDER BY created_at DESC",
       [req.user.id]
     );
     res.json({ success: true, jobs: result.rows });
