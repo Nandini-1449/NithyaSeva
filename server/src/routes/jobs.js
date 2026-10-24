@@ -39,11 +39,13 @@ router.post("/", requireAuth, requireRole("customer"), async (req, res) => {
   const serviceLocation = typeof req.body.serviceLocation === "string" ? req.body.serviceLocation.trim() : "";
   const budget = req.body.budget === undefined || req.body.budget === null || req.body.budget === "" ? null : Number(req.body.budget);
   const scheduledFor = req.body.scheduledFor || null;
+  const workerCount = req.body.workerCount === undefined || req.body.workerCount === null || req.body.workerCount === "" ? 1 : Number(req.body.workerCount);
   if (!title || title.length > 160) return res.status(400).json({ success: false, message: "Title is required and must be at most 160 characters." });
   if (!description || description.length > 10000) return res.status(400).json({ success: false, message: "Description is required and must be at most 10,000 characters." });
   if (!category || category.length > 100) return res.status(400).json({ success: false, message: "Category is required and must be at most 100 characters." });
   if (!serviceLocation || serviceLocation.length > 1000) return res.status(400).json({ success: false, message: "Service location is required and must be at most 1,000 characters." });
   if (budget !== null && (!Number.isFinite(budget) || budget < 0 || budget > 100000000)) return res.status(400).json({ success: false, message: "Budget must be a non-negative amount." });
+  if (!Number.isInteger(workerCount) || workerCount < 1 || workerCount > 10000) return res.status(400).json({ success: false, message: "Number of workers must be between 1 and 10,000." });
   if (scheduledFor !== null && (typeof scheduledFor !== "string" || Number.isNaN(Date.parse(scheduledFor)))) return res.status(400).json({ success: false, message: "Scheduled date must be a valid date/time." });
   if (scheduledFor && Date.parse(scheduledFor) < Date.now()) return res.status(400).json({ success: false, message: "Scheduled date/time must be in the future." });
 
@@ -59,10 +61,10 @@ router.post("/", requireAuth, requireRole("customer"), async (req, res) => {
       [category, categorySlug]
     );
     const result = await client.query(
-      `INSERT INTO jobs (customer_id, title, description, category, category_id, service_location, budget, scheduled_for)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8)
-       RETURNING id, customer_id, title, description, category, category_id, service_location, budget, scheduled_for, status, created_at`,
-      [req.user.id, title, description, category, categoryResult.rows[0].id, serviceLocation, budget, scheduledFor]
+      `INSERT INTO jobs (customer_id, title, description, category, category_id, service_location, budget, scheduled_for, worker_count)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)
+       RETURNING id, customer_id, title, description, category, category_id, service_location, budget, scheduled_for, worker_count, status, created_at`,
+      [req.user.id, title, description, category, categoryResult.rows[0].id, serviceLocation, budget, scheduledFor, workerCount]
     );
     await client.query(
       "INSERT INTO audit_logs (actor_user_id, action, entity_type, entity_id) VALUES ($1, 'job.created', 'job', $2)",
