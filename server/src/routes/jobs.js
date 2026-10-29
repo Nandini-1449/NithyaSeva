@@ -44,7 +44,7 @@ router.get("/", async (req, res) => {
              SIN(RADIANS($6)) * SIN(RADIANS(j.latitude)) +
              COS(RADIANS($6)) * COS(RADIANS(j.latitude)) * COS(RADIANS(j.longitude) - RADIANS($7))
            ))) <= $9))
-       ORDER BY CASE WHEN $8 = 'nearby' THEN (6371 * ACOS(LEAST(1, GREATEST(-1, SIN(RADIANS($6)) * SIN(RADIANS(j.latitude)) + COS(RADIANS($6)) * COS(RADIANS(j.latitude)) * COS(RADIANS(j.longitude) - RADIANS($7))))) END ASC NULLS LAST, j.created_at DESC
+       ORDER BY distance_km ASC NULLS LAST, j.created_at DESC
        LIMIT $4 OFFSET $5`,
       [status, category, search, limit, offset, mode === "nearby" ? latitude : null, mode === "nearby" ? longitude : null, mode, radiusKm]
     );
