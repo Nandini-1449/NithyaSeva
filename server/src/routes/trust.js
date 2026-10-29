@@ -7,7 +7,7 @@ router.get("/notifications", requireAuth, async (req, res) => {
   const limit = Math.min(Math.max(Number.parseInt(req.query.limit, 10) || 20, 1), 50);
   try {
     const result = await pool.query(
-      "SELECT n.id, n.notification_type, n.title, n.message, n.related_job_id, n.read_at, n.created_at, j.title AS job_title, j.description AS job_description, j.category AS job_category, j.service_location AS job_location, j.status AS job_status, j.worker_count AS workers_requested FROM notifications n LEFT JOIN jobs j ON j.id = n.related_job_id WHERE n.user_id = $1 ORDER BY n.created_at DESC LIMIT $2",
+      "SELECT n.id, n.notification_type, n.title, n.message, n.related_job_id, n.read_at, n.created_at, j.title AS job_title, j.description AS job_description, j.category AS job_category, j.service_location AS job_location, j.status AS job_status, j.worker_count AS workers_requested, (SELECT COUNT(*)::int FROM job_assignments a WHERE a.job_id = j.id AND a.status <> 'cancelled') AS workers_assigned, GREATEST(j.worker_count - (SELECT COUNT(*)::int FROM job_assignments a WHERE a.job_id = j.id AND a.status <> 'cancelled'), 0)::int AS workers_still_required FROM notifications n LEFT JOIN jobs j ON j.id = n.related_job_id WHERE n.user_id = $1 ORDER BY n.created_at DESC LIMIT $2",
       [req.user.id, limit]
     );
     res.json({ success: true, notifications: result.rows });
