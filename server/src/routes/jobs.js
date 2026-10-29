@@ -512,7 +512,12 @@ router.patch("/:id/status", requireAuth, async (req, res) => {
           await client.query("COMMIT");
           return res.json({ success: true, message: "Cancellation requested. Assigned workers must acknowledge before they are released.", jobId: job.id, status: "cancellation_pending" });
         }
-        await client.query("UPDATE job_assignments SET cancellation_acknowledged_at = NOW(), status = 'cancelled' WHERE id = ANY($1::bigint[])", [pending.rows.filter(a => String(a.cancellation_requested_by) !== String(req.user.id)).map(a => a.id)]);
+        const requestsFromOtherParty = pending.rows.filter(a => String(a.cancellation_requested_by) !== String(req.user.id));
+        if (!requestsFromOtherParty.length) {
+          await client.query("ROLLBACK");
+          return res.status(409).json({ success: false, message: "Your cancellation request is still waiting for the other party. You cannot acknowledge your own request." });
+        }
+        await client.query("UPDATE job_assignments SET cancellation_acknowledged_at = NOW(), status = 'cancelled' WHERE id = ANY($1::bigint[])", [requestsFromOtherParty.map(a => a.id)]);
         await client.query("UPDATE job_agreements SET status = 'cancelled', updated_at = NOW() WHERE job_id = $1 AND worker_id IN (SELECT worker_id FROM job_assignments WHERE job_id = $1 AND status = 'cancelled') AND status <> 'completed'", [job.id]);
         await client.query("UPDATE worker_profiles SET availability_status = 'available', updated_at = NOW() WHERE user_id IN (SELECT worker_id FROM job_assignments WHERE job_id = $1 AND status = 'cancelled')", [job.id]);
       }
