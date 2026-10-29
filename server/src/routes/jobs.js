@@ -299,75 +299,130 @@ router.patch("/:id/status", requireAuth, async (req, res) => {
       await client.query("ROLLBACK");
       return res.status(404).json({ success: false, message: "Job not found." });
     }
-
     const isCustomer = String(job.customer_id) === String(req.user.id);
     const isAdmin = req.user.role === "admin";
     const assignmentResult = await client.query(
       "SELECT * FROM job_assignments WHERE job_id = $1 AND worker_id = $2 AND status <> 'cancelled' FOR UPDATE",
       [job.id, req.user.id]
     );
-    const workerAssignment = assignmentResult.rows[0];
-    const isAssignedWorker = Boolean(workerAssignment);
-
+    const assignment = assignmentResult.rows[0];
+    const isAssignedWorker = Boolean(assignment);
     if (!isCustomer && !isAssignedWorker && !isAdmin) {
       await client.query("ROLLBACK");
       return res.status(403).json({ success: false, message: "Only the customer, an assigned worker, or an admin can update this job." });
     }
 
     if (status === "in_progress") {
-      if (!isAssignedWorker || !["assigned", "in_progress"].includes(job.status) || workerAssignment.status !== "accepted") {
+      if (!isAssignedWorker || !["assigned", "in_progress"].includes(job.status) || assignment.status !== "accepted") {
         await client.query("ROLLBACK");
-        return res.status(409).json({ success: false, message: "Only an accepted worker on a fully staffed job can start work." });
+        return res.status(409).json({ success: false, message: "Only an accepted worker can start work on this job." });
       }
-      await client.query("UPDATE job_assignments SET status = 'in_progress' WHERE id = $1", [workerAssignment.id]);
-      await client.query("UPDATE job_agreements SET status = 'accepted', updated_at = NOW() WHERE job_id = $1 AND worker_id = $2 AND status = 'accepted'", [job.id, req.user.id]);
+      await client.query("UPDATE job_assignments SET status = 'in_progress' WHERE id = $1", [assignment.id]);
       await client.query("UPDATE jobs SET status = 'in_progress', updated_at = NOW() WHERE id = $1", [job.id]);
-    } else if (status === "completed") {
-      if (!isCustomer || job.status !== "in_progress") {
-        await client.query("ROLLBACK");
-        return res.status(409).json({ success: false, message: "Only the customer can confirm completion after work has started." });
-      }
-      const assignmentCounts = await client.query(
-        "SELECT COUNT(*)::int AS total, COUNT(*) FILTER (WHERE status = 'in_progress')::int AS in_progress_total FROM job_assignments WHERE job_id = $1 AND status <> 'cancelled'",
-        [job.id]
-      );
-      if (assignmentCounts.rows[0].total === 0 || assignmentCounts.rows[0].total !== assignmentCounts.rows[0].in_progress_total) {
-        await client.query("ROLLBACK");
-        return res.status(409).json({ success: false, message: "All assigned workers must mark the job in progress before the customer can confirm completion." });
-      }
-      await client.query("UPDATE jobs SET status = 'completed', updated_at = NOW() WHERE id = $1", [job.id]);
-      await client.query("UPDATE job_assignments SET status = 'completed', completed_at = NOW() WHERE job_id = $1 AND status = 'in_progress'", [job.id]);
-      await client.query("UPDATE job_agreements SET status = 'completed', completed_at = NOW(), updated_at = NOW() WHERE job_id = $1 AND status <> 'cancelled'", [job.id]);
-      await client.query(
-        "UPDATE worker_profiles SET availability_status = 'available', updated_at = NOW() WHERE user_id IN (SELECT worker_id FROM job_assignments WHERE job_id = $1)",
-        [job.id]
-      );
-    } else {
-      if (!isCustomer || !["open", "assigned"].includes(job.status)) {
-        await client.query("ROLLBACK");
-        return res.status(409).json({ success: false, message: "Only the customer can cancel an open or assigned job." });
-      }
-      await client.query("UPDATE jobs SET status = 'cancelled', updated_at = NOW() WHERE id = $1", [job.id]);
-      await client.query("UPDATE job_assignments SET status = 'cancelled' WHERE job_id = $1 AND status <> 'completed'", [job.id]);
-      await client.query("UPDATE job_agreements SET status = 'cancelled', updated_at = NOW() WHERE job_id = $1 AND status <> 'completed'", [job.id]);
-      await client.query(
-        "UPDATE worker_profiles SET availability_status = 'available', updated_at = NOW() WHERE user_id IN (SELECT worker_id FROM job_assignments WHERE job_id = $1)",
-        [job.id]
-      );
+      await client.query("COMMIT");
+      return res.json({ success: true, message: "Work marked as in progress.", jobId: job.id, status: "in_progress" });
     }
 
-    await client.query(
-      "INSERT INTO audit_logs (actor_user_id, action, entity_type, entity_id) VALUES ($1, $2, 'job', $3)",
-      [req.user.id, `job.${status}`, String(job.id)]
-    );
-    await client.query("COMMIT");
-    res.json({ success: true, message: "Job status updated.", jobId: job.id, status });
+    if (status === "completed") {
+      if (!["in_progress", "assigned"].includes(job.status) || (!isCustomer && !isAssignedWorker && !isAdmin)) {
+        await client.query("ROLLBACK");
+        return res.status(409).json({ success: false, message: "This job is not eligible for completion confirmation." });
+      }
+      if (isAssignedWorker) {
+        if (!["in_progress", "accepted"].includes(assignment.status)) {
+          await client.query("ROLLBACK");
+          return res.status(409).json({ success: false, message: "This assignment cannot be marked complete." });
+        }
+        await client.query("UPDATE job_assignments SET worker_completed_at = COALESCE(worker_completed_at, NOW()) WHERE id = $1", [assignment.id]);
+      } else {
+        await client.query(
+          "UPDATE job_assignments SET customer_completed_at = COALESCE(customer_completed_at, NOW()) WHERE job_id = $1 AND status IN ('accepted', 'in_progress')",
+          [job.id]
+        );
+      }
+
+      await client.query(
+        "UPDATE job_assignments SET status = 'completed', completed_at = NOW() WHERE job_id = $1 AND status IN ('accepted', 'in_progress') AND worker_completed_at IS NOT NULL AND customer_completed_at IS NOT NULL",
+        [job.id]
+      );
+      await client.query(
+        "UPDATE job_agreements SET status = 'completed', completed_at = NOW(), updated_at = NOW() WHERE job_id = $1 AND worker_id IN (SELECT worker_id FROM job_assignments WHERE job_id = $1 AND status = 'completed') AND status <> 'cancelled'",
+        [job.id]
+      );
+      await client.query(
+        "UPDATE worker_profiles SET availability_status = 'available', updated_at = NOW() WHERE user_id IN (SELECT worker_id FROM job_assignments WHERE job_id = $1 AND status = 'completed')",
+        [job.id]
+      );
+      const totals = await client.query(
+        "SELECT COUNT(*) FILTER (WHERE status <> 'cancelled')::int AS active_total, COUNT(*) FILTER (WHERE status = 'completed')::int AS completed_total FROM job_assignments WHERE job_id = $1",
+        [job.id]
+      );
+      const allDone = totals.rows[0].active_total > 0 && totals.rows[0].active_total === totals.rows[0].completed_total;
+      if (allDone) await client.query("UPDATE jobs SET status = 'completed', updated_at = NOW() WHERE id = $1", [job.id]);
+      await client.query("COMMIT");
+      return res.json({ success: true, message: "Completion confirmation saved. A worker becomes available only after both parties confirm.", jobId: job.id, status: allDone ? "completed" : "in_progress" });
+    }
+
+    if (status === "cancelled") {
+      if (!isCustomer && !isAssignedWorker && !isAdmin) {
+        await client.query("ROLLBACK");
+        return res.status(403).json({ success: false, message: "Only the customer, an assigned worker, or an admin can request cancellation." });
+      }
+      if (["open", "assigned"].includes(job.status)) {
+        if (!isCustomer && !isAdmin) {
+          await client.query("ROLLBACK");
+          return res.status(403).json({ success: false, message: "Before work starts, only the customer or admin can cancel this job." });
+        }
+        await client.query("UPDATE jobs SET status = 'cancelled', updated_at = NOW() WHERE id = $1", [job.id]);
+        await client.query("UPDATE job_assignments SET status = 'cancelled', cancellation_requested_at = NOW(), cancellation_acknowledged_at = NOW(), cancellation_requested_by = $2 WHERE job_id = $1 AND status IN ('accepted', 'in_progress')", [job.id, req.user.id]);
+        await client.query("UPDATE job_agreements SET status = 'cancelled', updated_at = NOW() WHERE job_id = $1 AND status <> 'completed'", [job.id]);
+        await client.query("UPDATE worker_profiles SET availability_status = 'available', updated_at = NOW() WHERE user_id IN (SELECT worker_id FROM job_assignments WHERE job_id = $1 AND status = 'cancelled')", [job.id]);
+        await client.query("UPDATE job_applications SET status = 'withdrawn', reviewed_at = NOW(), updated_at = NOW() WHERE job_id = $1 AND status = 'pending'", [job.id]);
+        await client.query("COMMIT");
+        return res.json({ success: true, message: "Job cancelled before work started; assigned workers have been released.", jobId: job.id, status: "cancelled" });
+      }
+
+      if (job.status !== "in_progress") {
+        await client.query("ROLLBACK");
+        return res.status(409).json({ success: false, message: "This job cannot be cancelled in its current state." });
+      }
+      const cancelTarget = isAssignedWorker ? assignment : null;
+      if (cancelTarget) {
+        if (!cancelTarget.cancellation_requested_at) {
+          await client.query("UPDATE job_assignments SET cancellation_requested_at = NOW(), cancellation_requested_by = $2 WHERE id = $1", [cancelTarget.id, req.user.id]);
+          await client.query("COMMIT");
+          return res.json({ success: true, message: "Cancellation requested. The customer must acknowledge it before this worker is released.", jobId: job.id, status: "cancellation_pending" });
+        }
+        if (String(cancelTarget.cancellation_requested_by) === String(req.user.id)) {
+          await client.query("ROLLBACK");
+          return res.status(409).json({ success: false, message: "Waiting for the other party to acknowledge cancellation." });
+        }
+        await client.query("UPDATE job_assignments SET cancellation_acknowledged_at = NOW(), status = 'cancelled' WHERE id = $1", [cancelTarget.id]);
+        await client.query("UPDATE job_agreements SET status = 'cancelled', updated_at = NOW() WHERE job_id = $1 AND worker_id = $2 AND status <> 'completed'", [job.id, cancelTarget.worker_id]);
+        await client.query("UPDATE worker_profiles SET availability_status = 'available', updated_at = NOW() WHERE user_id = $1", [cancelTarget.worker_id]);
+      } else {
+        const pending = await client.query("SELECT * FROM job_assignments WHERE job_id = $1 AND status = 'in_progress' AND cancellation_requested_at IS NOT NULL AND cancellation_acknowledged_at IS NULL FOR UPDATE", [job.id]);
+        if (!pending.rowCount) {
+          await client.query("UPDATE job_assignments SET cancellation_requested_at = NOW(), cancellation_requested_by = $2 WHERE job_id = $1 AND status = 'in_progress' AND cancellation_requested_at IS NULL", [job.id, req.user.id]);
+          await client.query("COMMIT");
+          return res.json({ success: true, message: "Cancellation requested. Assigned workers must acknowledge before they are released.", jobId: job.id, status: "cancellation_pending" });
+        }
+        await client.query("UPDATE job_assignments SET cancellation_acknowledged_at = NOW(), status = 'cancelled' WHERE id = ANY($1::bigint[])", [pending.rows.filter(a => String(a.cancellation_requested_by) !== String(req.user.id)).map(a => a.id)]);
+        await client.query("UPDATE job_agreements SET status = 'cancelled', updated_at = NOW() WHERE job_id = $1 AND worker_id IN (SELECT worker_id FROM job_assignments WHERE job_id = $1 AND status = 'cancelled') AND status <> 'completed'", [job.id]);
+        await client.query("UPDATE worker_profiles SET availability_status = 'available', updated_at = NOW() WHERE user_id IN (SELECT worker_id FROM job_assignments WHERE job_id = $1 AND status = 'cancelled')", [job.id]);
+      }
+      const remaining = await client.query("SELECT COUNT(*)::int AS total FROM job_assignments WHERE job_id = $1 AND status IN ('accepted', 'in_progress')", [job.id]);
+      if (remaining.rows[0].total === 0) await client.query("UPDATE jobs SET status = 'cancelled', updated_at = NOW() WHERE id = $1", [job.id]);
+      await client.query("COMMIT");
+      return res.json({ success: true, message: "Cancellation acknowledgement recorded.", jobId: job.id, status: remaining.rows[0].total === 0 ? "cancelled" : "in_progress" });
+    }
   } catch (error) {
     await client.query("ROLLBACK").catch(() => {});
     console.error("Job status update error:", error.message);
-    res.status(500).json({ success: false, message: "Could not update job status." });
+    return res.status(500).json({ success: false, message: "Could not update job status." });
   } finally {
     client.release();
   }
 });
+
 module.exports = router;
