@@ -18,6 +18,19 @@ BEGIN
   END LOOP;
 END $$;
 
+-- Permit a worker to reapply after an earlier application was withdrawn.
+ALTER TABLE job_applications
+  DROP CONSTRAINT IF EXISTS job_applications_job_id_worker_id_key;
+
+CREATE UNIQUE INDEX IF NOT EXISTS idx_job_applications_active_worker_job
+  ON job_applications(job_id, worker_id)
+  WHERE status IN ('pending', 'accepted');
+
+-- Enforce one active assignment per worker at database level as well as in the API.
+CREATE UNIQUE INDEX IF NOT EXISTS idx_job_assignments_one_active_job_per_worker
+  ON job_assignments(worker_id)
+  WHERE status IN ('accepted', 'in_progress');
+
 ALTER TABLE job_applications
   ADD CONSTRAINT job_applications_status_check
   CHECK (status IN ('pending', 'accepted', 'rejected', 'withdrawn'));
