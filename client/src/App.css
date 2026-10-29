@@ -355,14 +355,26 @@ h2 { font-size: clamp(32px, 4vw, 43px); line-height: 1.22; margin-bottom: 0; fon
   transform: translateY(-50%);
   border: 0;
   border-radius: 6px;
-  padding: 6px 8px;
-  background: #eaf3e9;
+  width: 34px;
+  height: 34px;
+  display: grid;
+  place-items: center;
+  padding: 6px;
+  background: transparent;
   color: var(--green-dark);
-  font: inherit;
-  font-size: 12px;
-  font-weight: 700;
+  border: 0;
   cursor: pointer;
 }
+.password-toggle svg {
+  width: 20px;
+  height: 20px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.password-toggle:hover { background: #eaf3e9; }
 .password-toggle:hover { background: #dcebd9; }
 .password-toggle:focus-visible,
 .show-password-option input:focus-visible { outline: 2px solid #24784d; outline-offset: 2px; }
