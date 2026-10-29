@@ -36,6 +36,7 @@ function App() {
   const [email, setEmail] = useState('')
   const [phone, setPhone] = useState('')
   const [password, setPassword] = useState('')
+  const [showPassword, setShowPassword] = useState(false)
   const [role, setRole] = useState('customer')
   const [notice, setNotice] = useState('')
   const [error, setError] = useState('')
@@ -54,6 +55,7 @@ function App() {
     setNotice('')
     setError('')
     setPassword('')
+    setShowPassword(false)
     window.scrollTo({ top: 0, behavior: 'smooth' })
   }
 
@@ -86,6 +88,7 @@ function App() {
       setAuthPage('')
       setNotice('')
       setPassword('')
+      setShowPassword(false)
     } catch (requestError) {
       setError(requestError.message || 'Could not connect to the server. Make sure the NithyaSeva backend is running.')
     } finally {
@@ -173,7 +176,14 @@ function App() {
                 </button>
               </div>
               <label htmlFor="password">Password</label>
-              <input id="password" name="password" type="password" autoComplete={authPage === 'register' ? 'new-password' : 'current-password'} value={password} onChange={e => setPassword(e.target.value)} minLength={authPage === 'register' ? 8 : undefined} maxLength={72} required placeholder={authPage === 'register' ? 'At least 8 characters' : 'Enter your password'} />
+              <div className="password-input-wrap">
+                <input id="password" name="password" type={showPassword ? 'text' : 'password'} autoComplete={authPage === 'register' ? 'new-password' : 'current-password'} value={password} onChange={e => setPassword(e.target.value)} minLength={authPage === 'register' ? 8 : undefined} maxLength={72} required placeholder={authPage === 'register' ? 'At least 8 characters' : 'Enter your password'} />
+                <button className="password-toggle" type="button" onClick={() => setShowPassword(value => !value)} aria-label={showPassword ? 'Hide password' : 'Show password'} aria-pressed={showPassword}>{showPassword ? 'Hide' : 'Show'}</button>
+              </div>
+              <label className="show-password-option">
+                <input type="checkbox" checked={showPassword} onChange={e => setShowPassword(e.target.checked)} />
+                Show password
+              </label>
               <button className="auth-submit" type="submit" disabled={busy}>
                 {busy ? 'Please wait…' : authPage === 'register' ? 'Create account' : 'Log in'} <span aria-hidden="true">↗</span>
               </button>
