@@ -426,6 +426,14 @@ router.patch("/:id/status", requireAuth, async (req, res) => {
         return res.status(409).json({ success: false, message: "This job is not eligible for completion confirmation." });
       }
       if (isAssignedWorker) {
+        const proof = await client.query(
+          "SELECT COUNT(*) FILTER (WHERE phase = 'before')::int AS before_count, COUNT(*) FILTER (WHERE phase = 'after')::int AS after_count FROM job_work_photos WHERE job_id = $1 AND worker_id = $2",
+          [job.id, req.user.id]
+        );
+        if (proof.rows[0].before_count < 1 || proof.rows[0].after_count < 1) {
+          await client.query("ROLLBACK");
+          return res.status(409).json({ success: false, message: "Upload at least one before-work photo and one after-work photo before confirming completion." });
+        }
         if (!["in_progress", "accepted"].includes(assignment.status)) {
           await client.query("ROLLBACK");
           return res.status(409).json({ success: false, message: "This assignment cannot be marked complete." });
