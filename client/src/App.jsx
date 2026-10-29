@@ -178,7 +178,13 @@ function App() {
               <label htmlFor="password">Password</label>
               <div className="password-input-wrap">
                 <input id="password" name="password" type={showPassword ? 'text' : 'password'} autoComplete={authPage === 'register' ? 'new-password' : 'current-password'} value={password} onChange={e => setPassword(e.target.value)} minLength={authPage === 'register' ? 8 : undefined} maxLength={72} required placeholder={authPage === 'register' ? 'At least 8 characters' : 'Enter your password'} />
-                <button className="password-toggle" type="button" onClick={() => setShowPassword(value => !value)} aria-label={showPassword ? 'Hide password' : 'Show password'} aria-pressed={showPassword}>{showPassword ? 'Hide' : 'Show'}</button>
+                <button className="password-toggle" type="button" onClick={() => setShowPassword(value => !value)} aria-label={showPassword ? 'Hide password' : 'Show password'} aria-pressed={showPassword} title={showPassword ? 'Hide password' : 'Show password'}>
+                  {showPassword ? (
+                    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 3l18 18M10.6 10.6a2 2 0 002.8 2.8M9.9 5.2A10.8 10.8 0 0112 5c5.2 0 8.7 4.4 9.5 6.1a1.8 1.8 0 010 1.8 13 13 0 01-3.1 3.7M6.2 6.2a14 14 0 00-3.7 4.9 1.8 1.8 0 000 1.8C3.3 14.6 6.8 19 12 19a10 10 0 003.1-.5" /></svg>
+                  ) : (
+                    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2.5 12s3.5-7 9.5-7 9.5 7 9.5 7-3.5 7-9.5 7-9.5-7-9.5-7z" /><circle cx="12" cy="12" r="3" /></svg>
+                  )}
+                </button>
               </div>
               <label className="show-password-option">
                 <input type="checkbox" checked={showPassword} onChange={e => setShowPassword(e.target.checked)} />
