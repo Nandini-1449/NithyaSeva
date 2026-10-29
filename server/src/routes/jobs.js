@@ -449,9 +449,9 @@ router.patch("/:id/status", requireAuth, async (req, res) => {
         await client.query("UPDATE job_agreements SET status = 'cancelled', updated_at = NOW() WHERE job_id = $1 AND worker_id = $2 AND status <> 'completed'", [job.id, cancelTarget.worker_id]);
         await client.query("UPDATE worker_profiles SET availability_status = 'available', updated_at = NOW() WHERE user_id = $1", [cancelTarget.worker_id]);
       } else {
-        const pending = await client.query("SELECT * FROM job_assignments WHERE job_id = $1 AND status = 'in_progress' AND cancellation_requested_at IS NOT NULL AND cancellation_acknowledged_at IS NULL FOR UPDATE", [job.id]);
+        const pending = await client.query("SELECT * FROM job_assignments WHERE job_id = $1 AND status IN ('accepted', 'in_progress') AND cancellation_requested_at IS NOT NULL AND cancellation_acknowledged_at IS NULL FOR UPDATE", [job.id]);
         if (!pending.rowCount) {
-          await client.query("UPDATE job_assignments SET cancellation_requested_at = NOW(), cancellation_requested_by = $2 WHERE job_id = $1 AND status = 'in_progress' AND cancellation_requested_at IS NULL", [job.id, req.user.id]);
+          await client.query("UPDATE job_assignments SET cancellation_requested_at = NOW(), cancellation_requested_by = $2 WHERE job_id = $1 AND status IN ('accepted', 'in_progress') AND cancellation_requested_at IS NULL", [job.id, req.user.id]);
           await client.query("COMMIT");
           return res.json({ success: true, message: "Cancellation requested. Assigned workers must acknowledge before they are released.", jobId: job.id, status: "cancellation_pending" });
         }
