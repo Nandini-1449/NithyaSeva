@@ -201,6 +201,14 @@ router.post("/:id/applications/:applicationId/accept", requireAuth, requireRole(
       await client.query("ROLLBACK");
       return res.status(404).json({ success: false, message: "Pending application not found." });
     }
+    const workerAvailability = await client.query(
+      "SELECT availability_status FROM worker_profiles WHERE user_id = $1 FOR UPDATE",
+      [application.worker_id]
+    );
+    if (!workerAvailability.rowCount || workerAvailability.rows[0].availability_status !== "available") {
+      await client.query("ROLLBACK");
+      return res.status(409).json({ success: false, message: "This worker is already assigned to another job and is currently busy." });
+    }
     const agreedPrice = application.proposed_price === null ? job.budget : application.proposed_price;
     if (agreedPrice === null || agreedPrice === undefined) {
       await client.query("ROLLBACK");
