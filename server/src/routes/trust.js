@@ -18,7 +18,7 @@ router.get("/notifications", requireAuth, async (req, res) => {
 });
 
 router.patch("/notifications/:id/read", requireAuth, async (req, res) => {
-  if (!/^\\d+$/.test(req.params.id)) return res.status(400).json({ success: false, message: "Invalid notification ID." });
+  if (!/^\d+$/.test(req.params.id)) return res.status(400).json({ success: false, message: "Invalid notification ID." });
   try {
     const result = await pool.query(
       "UPDATE notifications SET read_at = COALESCE(read_at, NOW()) WHERE id = $1 AND user_id = $2 RETURNING id, read_at",
