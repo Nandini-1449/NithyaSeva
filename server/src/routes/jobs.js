@@ -96,6 +96,30 @@ router.get("/mine", requireAuth, requireRole("customer"), async (req, res) => {
   }
 });
 
+router.get("/assigned/mine", requireAuth, requireRole("worker"), async (req, res) => {
+  try {
+    const result = await pool.query(
+      `SELECT a.id AS assignment_id, a.status AS assignment_status,
+              a.worker_completed_at, a.customer_completed_at,
+              a.cancellation_requested_at, a.cancellation_acknowledged_at,
+              a.cancellation_requested_by,
+              j.id AS job_id, j.title, j.description, j.category, j.service_location,
+              j.budget, j.scheduled_for, j.status AS job_status, j.worker_count,
+              u.full_name AS customer_name
+       FROM job_assignments a
+       JOIN jobs j ON j.id = a.job_id
+       JOIN users u ON u.id = j.customer_id
+       WHERE a.worker_id = $1
+       ORDER BY a.created_at DESC`,
+      [req.user.id]
+    );
+    res.json({ success: true, assignments: result.rows });
+  } catch (error) {
+    console.error("Worker assignments error:", error.message);
+    res.status(500).json({ success: false, message: "Could not load your assignments." });
+  }
+});
+
 router.get("/:id", async (req, res) => {
   if (!/^\d+$/.test(req.params.id)) return res.status(400).json({ success: false, message: "Invalid job ID." });
   try {
