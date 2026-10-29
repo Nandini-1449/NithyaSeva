@@ -128,11 +128,17 @@ router.post("/:id/applications", requireAuth, requireRole("worker"), async (req,
     if (String(job.rows[0].customer_id) === String(req.user.id)) return res.status(403).json({ success: false, message: "You cannot apply to your own job." });
     const profile = await pool.query("SELECT availability_status FROM worker_profiles WHERE user_id = $1", [req.user.id]);
     if (!profile.rowCount || profile.rows[0].availability_status !== "available") return res.status(409).json({ success: false, message: "Set your worker availability to available before applying." });
+    const existingApplication = await pool.query(
+      "SELECT id FROM job_applications WHERE job_id = $1 AND worker_id = $2 AND status IN ('pending', 'accepted') LIMIT 1",
+      [req.params.id, req.user.id]
+    );
+    if (existingApplication.rowCount) {
+      return res.status(409).json({ success: false, message: "You already have an active application for this job." });
+    }
     const result = await pool.query(
-      "INSERT INTO job_applications (job_id, worker_id, proposed_price, message) VALUES ($1,$2,$3,$4) ON CONFLICT (job_id, worker_id) DO NOTHING RETURNING id, job_id, worker_id, proposed_price, message, status, created_at",
+      "INSERT INTO job_applications (job_id, worker_id, proposed_price, message, status) VALUES ($1,$2,$3,$4,'pending') RETURNING id, job_id, worker_id, proposed_price, message, status, created_at",
       [req.params.id, req.user.id, proposedPrice, message || null]
     );
-    if (!result.rowCount) return res.status(409).json({ success: false, message: "You have already applied to this job." });
     await pool.query(
       "INSERT INTO notifications (user_id, notification_type, title, message, related_job_id) VALUES ($1, 'job.application', 'New job application', $2, $3)",
       [job.rows[0].customer_id, "A worker has applied to your job.", req.params.id]
@@ -158,8 +164,14 @@ router.get("/:id/applications", requireAuth, async (req, res) => {
               a.proposed_price, a.message, a.status, a.created_at
        FROM job_applications a JOIN users u ON u.id = a.worker_id
        LEFT JOIN worker_profiles p ON p.user_id = u.id
-       WHERE a.job_id = $1 ORDER BY a.created_at ASC`,
-      [req.params.id]
+       WHERE a.job_id = $1
+         AND (
+           $2 = 'admin'
+           OR a.status = 'accepted'
+           OR (a.status = 'pending' AND p.availability_status = 'available')
+         )
+       ORDER BY a.created_at ASC`,
+      [req.params.id, req.user.role]
     );
     res.json({ success: true, applications: result.rows });
   } catch (error) {
@@ -233,6 +245,11 @@ router.post("/:id/applications/:applicationId/accept", requireAuth, requireRole(
     await client.query(
       "UPDATE job_applications SET status = 'accepted', reviewed_at = NOW(), updated_at = NOW() WHERE id = $1",
       [application.id]
+    );
+    // Preserve application history but require workers to reapply after this job.
+    await client.query(
+      "UPDATE job_applications SET status = 'withdrawn', reviewed_at = NOW(), updated_at = NOW() WHERE worker_id = $1 AND id <> $2 AND status = 'pending'",
+      [application.worker_id, application.id]
     );
     const newAssignedResult = await client.query(
       "SELECT COUNT(*)::int AS total FROM job_assignments WHERE job_id = $1 AND status <> 'cancelled'",
