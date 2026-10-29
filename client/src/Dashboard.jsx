@@ -240,6 +240,7 @@ function WorkPhotos({ jobId, user, request, mode }) {
 
   async function upload(e) {
     e.preventDefault();
+    const formElement = e.currentTarget;
     if (!selected) return;
     setBusy(true); setPhotoError('');
     try {
@@ -248,7 +249,7 @@ function WorkPhotos({ jobId, user, request, mode }) {
       form.append('photo', selected);
       await request('/work-proof/jobs/' + jobId + '/photos', { method: 'POST', body: form });
       setSelected(null);
-      e.currentTarget.reset();
+      formElement.reset();
       setReloadKey(k => k + 1);
     } catch (err) {
       setPhotoError(err.message || 'Could not upload photo.');
