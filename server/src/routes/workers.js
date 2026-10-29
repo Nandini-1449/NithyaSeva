@@ -69,6 +69,18 @@ router.put("/me", requireAuth, requireRole("worker"), async (req, res) => {
   }
 
   try {
+    if (availabilityStatus !== undefined) {
+      const activeAssignment = await pool.query(
+        "SELECT 1 FROM job_assignments WHERE worker_id = $1 AND status IN ('accepted', 'in_progress') LIMIT 1",
+        [req.user.id]
+      );
+      if (activeAssignment.rowCount && availabilityStatus !== "busy") {
+        return res.status(409).json({ success: false, message: "Your availability is managed by your active assignment until it is completed or cancelled." });
+      }
+      if (!activeAssignment.rowCount && availabilityStatus === "busy") {
+        return res.status(400).json({ success: false, message: "You cannot mark yourself busy without an active assignment. Choose unavailable if you want to take a break." });
+      }
+    }
     const result = await pool.query(
       `UPDATE worker_profiles SET
          bio = COALESCE($2, bio),
