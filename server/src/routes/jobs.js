@@ -363,6 +363,12 @@ router.post("/:id/applications/:applicationId/accept", requireAuth, requireRole(
       "INSERT INTO notifications (user_id, notification_type, title, message, related_job_id) VALUES ($1, 'application.accepted', 'Your application was accepted', $2, $3)",
       [application.worker_id, (await client.query("SELECT full_name FROM users WHERE id = $1", [job.customer_id])).rows[0]?.full_name + " accepted your application for: " + job.title + ".", job.id]
     );
+    if (headcountReached) {
+      await client.query(
+        "INSERT INTO notifications (user_id, notification_type, title, message, related_job_id) SELECT a.worker_id, 'job.team_complete', 'Your work team is complete', 'The requested team is now assigned for: ' || j.title || '. The customer must approve sharing contact details before the exact address and phone number become available.', j.id FROM job_assignments a JOIN jobs j ON j.id = a.job_id WHERE a.job_id = $1 AND a.status <> 'cancelled'",
+        [job.id]
+      );
+    }
     await client.query("INSERT INTO audit_logs (actor_user_id, action, entity_type, entity_id) VALUES ($1, 'application.accepted', 'job', $2)", [req.user.id, String(job.id)]);
     await client.query("COMMIT");
     res.json({ success: true, message: headcountReached ? "Requested worker count reached. The job is now assigned." : "Worker selected. The job remains open while more workers are needed.", jobId: job.id, workerId: application.worker_id, agreedPrice, assignedWorkerCount: newAssignedCount, workerCount: job.worker_count, workersNeeded: Math.max(job.worker_count - newAssignedCount, 0), headcountReached });
