@@ -10,13 +10,28 @@ router.get("/", async (req, res) => {
   const search = typeof req.query.search === "string" ? req.query.search.trim().slice(0, 100) : "";
   const limit = Math.min(Math.max(Number.parseInt(req.query.limit, 10) || 20, 1), 50);
   const offset = Math.max(Number.parseInt(req.query.offset, 10) || 0, 0);
+  const mode = req.query.mode === "nearby" ? "nearby" : "all";
+  const latitude = req.query.latitude === undefined ? null : Number(req.query.latitude);
+  const longitude = req.query.longitude === undefined ? null : Number(req.query.longitude);
+  const radiusKm = req.query.radiusKm === undefined ? 25 : Number(req.query.radiusKm);
   if (!["open", "assigned", "in_progress", "completed", "cancelled", "all"].includes(status)) {
     return res.status(400).json({ success: false, message: "Invalid job status filter." });
+  }
+  if (mode === "nearby" && (!Number.isFinite(latitude) || latitude < -90 || latitude > 90 || !Number.isFinite(longitude) || longitude < -180 || longitude > 180)) {
+    return res.status(400).json({ success: false, message: "Share your location to search nearby jobs." });
+  }
+  if (!Number.isFinite(radiusKm) || radiusKm < 1 || radiusKm > 200) {
+    return res.status(400).json({ success: false, message: "Distance must be between 1 and 200 km." });
   }
   try {
     const result = await pool.query(
       `SELECT j.id, j.title, j.description, j.category, j.category_id, j.service_location,
-              j.budget, j.scheduled_for, j.worker_count, j.status, j.created_at, j.updated_at,
+              j.latitude, j.longitude, j.budget, j.scheduled_for, j.worker_count, j.status, j.created_at, j.updated_at,
+              CASE WHEN $6::double precision IS NULL OR j.latitude IS NULL OR j.longitude IS NULL THEN NULL
+                ELSE ROUND((6371 * ACOS(LEAST(1, GREATEST(-1,
+                  SIN(RADIANS($6)) * SIN(RADIANS(j.latitude)) +
+                  COS(RADIANS($6)) * COS(RADIANS(j.latitude)) * COS(RADIANS(j.longitude) - RADIANS($7))
+                ))))::numeric, 1) END AS distance_km,
               (SELECT COUNT(*)::int FROM job_assignments a WHERE a.job_id = j.id AND a.status <> 'cancelled') AS assigned_worker_count,
               GREATEST(j.worker_count - (SELECT COUNT(*)::int FROM job_assignments a WHERE a.job_id = j.id AND a.status <> 'cancelled'), 0) AS workers_needed,
               u.id AS customer_id, u.full_name AS customer_name
@@ -24,10 +39,16 @@ router.get("/", async (req, res) => {
        WHERE ($1 = 'all' OR j.status = $1)
          AND ($2 = '' OR j.category ILIKE '%' || $2 || '%')
          AND ($3 = '' OR j.title ILIKE '%' || $3 || '%' OR j.description ILIKE '%' || $3 || '%')
-       ORDER BY j.created_at DESC LIMIT $4 OFFSET $5`,
-      [status, category, search, limit, offset]
+         AND ($8 = 'all' OR (j.latitude IS NOT NULL AND j.longitude IS NOT NULL AND
+           6371 * ACOS(LEAST(1, GREATEST(-1,
+             SIN(RADIANS($6)) * SIN(RADIANS(j.latitude)) +
+             COS(RADIANS($6)) * COS(RADIANS(j.latitude)) * COS(RADIANS(j.longitude) - RADIANS($7))
+           ))) <= $9))
+       ORDER BY CASE WHEN $8 = 'nearby' THEN distance_km END ASC NULLS LAST, j.created_at DESC
+       LIMIT $4 OFFSET $5`,
+      [status, category, search, limit, offset, mode === "nearby" ? latitude : null, mode === "nearby" ? longitude : null, mode, radiusKm]
     );
-    res.json({ success: true, jobs: result.rows, pagination: { limit, offset } });
+    res.json({ success: true, jobs: result.rows, pagination: { limit, offset }, locationMode: mode, radiusKm: mode === "nearby" ? radiusKm : null });
   } catch (error) {
     console.error("Job listing error:", error.message);
     res.status(500).json({ success: false, message: "Could not load jobs." });
@@ -42,12 +63,15 @@ router.post("/", requireAuth, requireRole("customer"), async (req, res) => {
   const budget = req.body.budget === undefined || req.body.budget === null || req.body.budget === "" ? null : Number(req.body.budget);
   const scheduledFor = req.body.scheduledFor || null;
   const workerCount = req.body.workerCount === undefined || req.body.workerCount === null || req.body.workerCount === "" ? 1 : Number(req.body.workerCount);
+  const latitude = req.body.latitude === undefined || req.body.latitude === null || req.body.latitude === "" ? null : Number(req.body.latitude);
+  const longitude = req.body.longitude === undefined || req.body.longitude === null || req.body.longitude === "" ? null : Number(req.body.longitude);
   if (!title || title.length > 160) return res.status(400).json({ success: false, message: "Title is required and must be at most 160 characters." });
   if (!description || description.length > 10000) return res.status(400).json({ success: false, message: "Description is required and must be at most 10,000 characters." });
   if (!category || category.length > 100) return res.status(400).json({ success: false, message: "Category is required and must be at most 100 characters." });
   if (!serviceLocation || serviceLocation.length > 1000) return res.status(400).json({ success: false, message: "Service location is required and must be at most 1,000 characters." });
   if (budget !== null && (!Number.isFinite(budget) || budget < 0 || budget > 100000000)) return res.status(400).json({ success: false, message: "Budget must be a non-negative amount." });
   if (!Number.isInteger(workerCount) || workerCount < 1 || workerCount > 10000) return res.status(400).json({ success: false, message: "Number of workers must be between 1 and 10,000." });
+  if ((latitude === null) !== (longitude === null) || (latitude !== null && (!Number.isFinite(latitude) || latitude < -90 || latitude > 90 || !Number.isFinite(longitude) || longitude < -180 || longitude > 180))) return res.status(400).json({ success: false, message: "Location coordinates are invalid." });
   if (scheduledFor !== null && (typeof scheduledFor !== "string" || Number.isNaN(Date.parse(scheduledFor)))) return res.status(400).json({ success: false, message: "Scheduled date must be a valid date/time." });
   if (scheduledFor && Date.parse(scheduledFor) < Date.now()) return res.status(400).json({ success: false, message: "Scheduled date/time must be in the future." });
 
@@ -63,10 +87,10 @@ router.post("/", requireAuth, requireRole("customer"), async (req, res) => {
       [category, categorySlug]
     );
     const result = await client.query(
-      `INSERT INTO jobs (customer_id, title, description, category, category_id, service_location, budget, scheduled_for, worker_count)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)
-       RETURNING id, customer_id, title, description, category, category_id, service_location, budget, scheduled_for, worker_count, status, created_at`,
-      [req.user.id, title, description, category, categoryResult.rows[0].id, serviceLocation, budget, scheduledFor, workerCount]
+      `INSERT INTO jobs (customer_id, title, description, category, category_id, service_location, budget, scheduled_for, worker_count, latitude, longitude)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)
+       RETURNING id, customer_id, title, description, category, category_id, service_location, latitude, longitude, budget, scheduled_for, worker_count, status, created_at`,
+      [req.user.id, title, description, category, categoryResult.rows[0].id, serviceLocation, budget, scheduledFor, workerCount, latitude, longitude]
     );
     await client.query(
       "INSERT INTO audit_logs (actor_user_id, action, entity_type, entity_id) VALUES ($1, 'job.created', 'job', $2)",
