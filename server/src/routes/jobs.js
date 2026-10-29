@@ -205,7 +205,7 @@ router.post("/:id/applications", requireAuth, requireRole("worker"), async (req,
 });
 
 router.patch("/:id/share-contact", requireAuth, requireRole("customer"), async (req, res) => {
-  if (!/^\\d+$/.test(req.params.id)) return res.status(400).json({ success: false, message: "Invalid job ID." });
+  if (!/^\d+$/.test(req.params.id)) return res.status(400).json({ success: false, message: "Invalid job ID." });
   const approved = req.body?.approved === true;
   const client = await pool.connect();
   try {
