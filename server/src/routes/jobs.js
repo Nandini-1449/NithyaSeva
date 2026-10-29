@@ -60,6 +60,7 @@ router.post("/", requireAuth, requireRole("customer"), async (req, res) => {
   const description = typeof req.body.description === "string" ? req.body.description.trim() : "";
   const category = typeof req.body.category === "string" ? req.body.category.trim() : "";
   const serviceLocation = typeof req.body.serviceLocation === "string" ? req.body.serviceLocation.trim() : "";
+  const exactAddress = typeof req.body.exactAddress === "string" ? req.body.exactAddress.trim() : "";
   const budget = req.body.budget === undefined || req.body.budget === null || req.body.budget === "" ? null : Number(req.body.budget);
   const scheduledFor = req.body.scheduledFor || null;
   const workerCount = req.body.workerCount === undefined || req.body.workerCount === null || req.body.workerCount === "" ? 1 : Number(req.body.workerCount);
@@ -69,6 +70,7 @@ router.post("/", requireAuth, requireRole("customer"), async (req, res) => {
   if (!description || description.length > 10000) return res.status(400).json({ success: false, message: "Description is required and must be at most 10,000 characters." });
   if (!category || category.length > 100) return res.status(400).json({ success: false, message: "Category is required and must be at most 100 characters." });
   if (!serviceLocation || serviceLocation.length > 1000) return res.status(400).json({ success: false, message: "Service location is required and must be at most 1,000 characters." });
+  if (!exactAddress || exactAddress.length > 2000) return res.status(400).json({ success: false, message: "Exact job address is required and must be at most 2,000 characters." });
   if (budget !== null && (!Number.isFinite(budget) || budget < 0 || budget > 100000000)) return res.status(400).json({ success: false, message: "Budget must be a non-negative amount." });
   if (!Number.isInteger(workerCount) || workerCount < 1 || workerCount > 10000) return res.status(400).json({ success: false, message: "Number of workers must be between 1 and 10,000." });
   if ((latitude === null) !== (longitude === null) || (latitude !== null && (!Number.isFinite(latitude) || latitude < -90 || latitude > 90 || !Number.isFinite(longitude) || longitude < -180 || longitude > 180))) return res.status(400).json({ success: false, message: "Location coordinates are invalid." });
@@ -87,10 +89,10 @@ router.post("/", requireAuth, requireRole("customer"), async (req, res) => {
       [category, categorySlug]
     );
     const result = await client.query(
-      `INSERT INTO jobs (customer_id, title, description, category, category_id, service_location, budget, scheduled_for, worker_count, latitude, longitude)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)
-       RETURNING id, customer_id, title, description, category, category_id, service_location, latitude, longitude, budget, scheduled_for, worker_count, status, created_at`,
-      [req.user.id, title, description, category, categoryResult.rows[0].id, serviceLocation, budget, scheduledFor, workerCount, latitude, longitude]
+      `INSERT INTO jobs (customer_id, title, description, category, category_id, service_location, exact_address, budget, scheduled_for, worker_count, latitude, longitude)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)
+       RETURNING id, customer_id, title, description, category, category_id, service_location, exact_address, latitude, longitude, budget, scheduled_for, worker_count, status, created_at`,
+      [req.user.id, title, description, category, categoryResult.rows[0].id, serviceLocation, exactAddress, budget, scheduledFor, workerCount, latitude, longitude]
     );
     await client.query(
       "INSERT INTO audit_logs (actor_user_id, action, entity_type, entity_id) VALUES ($1, 'job.created', 'job', $2)",
@@ -110,7 +112,7 @@ router.post("/", requireAuth, requireRole("customer"), async (req, res) => {
 router.get("/mine", requireAuth, requireRole("customer"), async (req, res) => {
   try {
     const result = await pool.query(
-      "SELECT j.id, j.title, j.description, j.category, j.service_location, j.budget, j.scheduled_for, j.worker_count, j.status, j.created_at, j.updated_at, (SELECT COUNT(*)::int FROM job_assignments a WHERE a.job_id = j.id AND a.status <> 'cancelled') AS assigned_worker_count, GREATEST(j.worker_count - (SELECT COUNT(*)::int FROM job_assignments a WHERE a.job_id = j.id AND a.status <> 'cancelled'), 0) AS workers_needed, COALESCE((SELECT json_agg(json_build_object('worker_id', u.id, 'worker_name', u.full_name, 'assignment_status', a.status) ORDER BY u.full_name) FROM job_assignments a JOIN users u ON u.id = a.worker_id WHERE a.job_id = j.id AND a.status <> 'cancelled'), '[]'::json) AS assigned_workers FROM jobs j WHERE j.customer_id = $1 ORDER BY j.created_at DESC",
+      "SELECT j.id, j.title, j.description, j.category, j.service_location, j.exact_address, j.contact_sharing_approved_at, j.budget, j.scheduled_for, j.worker_count, j.status, j.created_at, j.updated_at, (SELECT COUNT(*)::int FROM job_assignments a WHERE a.job_id = j.id AND a.status <> 'cancelled') AS assigned_worker_count, GREATEST(j.worker_count - (SELECT COUNT(*)::int FROM job_assignments a WHERE a.job_id = j.id AND a.status <> 'cancelled'), 0) AS workers_needed, COALESCE((SELECT json_agg(json_build_object('worker_id', u.id, 'worker_name', u.full_name, 'assignment_status', a.status) ORDER BY u.full_name) FROM job_assignments a JOIN users u ON u.id = a.worker_id WHERE a.job_id = j.id AND a.status <> 'cancelled'), '[]'::json) AS assigned_workers FROM jobs j WHERE j.customer_id = $1 ORDER BY j.created_at DESC",
       [req.user.id]
     );
     res.json({ success: true, jobs: result.rows });
@@ -129,7 +131,10 @@ router.get("/assigned/mine", requireAuth, requireRole("worker"), async (req, res
               a.cancellation_requested_by,
               j.id AS job_id, j.title, j.description, j.category, j.service_location,
               j.budget, j.scheduled_for, j.status AS job_status, j.worker_count,
-              u.full_name AS customer_name
+              u.full_name AS customer_name,
+              CASE WHEN j.contact_sharing_approved_at IS NOT NULL AND (SELECT COUNT(*) FROM job_assignments team WHERE team.job_id = j.id AND team.status <> 'cancelled') >= j.worker_count THEN j.exact_address ELSE NULL END AS exact_address,
+              CASE WHEN j.contact_sharing_approved_at IS NOT NULL AND (SELECT COUNT(*) FROM job_assignments team WHERE team.job_id = j.id AND team.status <> 'cancelled') >= j.worker_count THEN u.phone ELSE NULL END AS customer_phone,
+              (j.contact_sharing_approved_at IS NOT NULL AND (SELECT COUNT(*) FROM job_assignments team WHERE team.job_id = j.id AND team.status <> 'cancelled') >= j.worker_count) AS contact_details_shared
        FROM job_assignments a
        JOIN jobs j ON j.id = a.job_id
        JOIN users u ON u.id = j.customer_id
@@ -150,6 +155,7 @@ router.get("/:id", async (req, res) => {
     const result = await pool.query(
       `SELECT j.id, j.title, j.description, j.category, j.category_id, j.service_location,
               j.budget, j.scheduled_for, j.worker_count, j.status, j.created_at, j.updated_at,
+              j.exact_address, j.contact_sharing_approved_at,
               (SELECT COUNT(*)::int FROM job_assignments a WHERE a.job_id = j.id AND a.status <> 'cancelled') AS assigned_worker_count,
               GREATEST(j.worker_count - (SELECT COUNT(*)::int FROM job_assignments a WHERE a.job_id = j.id AND a.status <> 'cancelled'), 0) AS workers_needed,
               u.id AS customer_id, u.full_name AS customer_name
@@ -195,6 +201,43 @@ router.post("/:id/applications", requireAuth, requireRole("worker"), async (req,
   } catch (error) {
     console.error("Job application error:", error.message);
     res.status(500).json({ success: false, message: "Could not submit your application." });
+  }
+});
+
+router.patch("/:id/share-contact", requireAuth, requireRole("customer"), async (req, res) => {
+  if (!/^\\d+$/.test(req.params.id)) return res.status(400).json({ success: false, message: "Invalid job ID." });
+  const approved = req.body?.approved === true;
+  const client = await pool.connect();
+  try {
+    await client.query("BEGIN");
+    const jobResult = await client.query("SELECT id, customer_id, worker_count, contact_sharing_approved_at FROM jobs WHERE id = $1 FOR UPDATE", [req.params.id]);
+    const job = jobResult.rows[0];
+    if (!job || String(job.customer_id) !== String(req.user.id)) {
+      await client.query("ROLLBACK");
+      return res.status(404).json({ success: false, message: "Job not found for this customer." });
+    }
+    const countResult = await client.query("SELECT COUNT(*)::int AS total FROM job_assignments WHERE job_id = $1 AND status <> 'cancelled'", [job.id]);
+    if (approved && countResult.rows[0].total < job.worker_count) {
+      await client.query("ROLLBACK");
+      return res.status(409).json({ success: false, message: "The requested worker team must be complete before sharing contact details." });
+    }
+    if (approved) {
+      await client.query("UPDATE jobs SET contact_sharing_approved_at = NOW(), contact_sharing_approved_by = $2, updated_at = NOW() WHERE id = $1", [job.id, req.user.id]);
+      await client.query(
+        "INSERT INTO notifications (user_id, notification_type, title, message, related_job_id) SELECT a.worker_id, 'job.contact_shared', 'Customer shared job details', 'The customer approved sharing the exact address and contact number for: ' || j.title || '.', j.id FROM job_assignments a JOIN jobs j ON j.id = a.job_id WHERE a.job_id = $1 AND a.status <> 'cancelled'",
+        [job.id]
+      );
+    } else {
+      await client.query("UPDATE jobs SET contact_sharing_approved_at = NULL, contact_sharing_approved_by = NULL, updated_at = NOW() WHERE id = $1", [job.id]);
+    }
+    await client.query("COMMIT");
+    return res.json({ success: true, approved, message: approved ? "Contact details are now available to assigned workers." : "Contact detail sharing has been revoked." });
+  } catch (error) {
+    await client.query("ROLLBACK").catch(() => {});
+    console.error("Contact sharing approval error:", error.message);
+    return res.status(500).json({ success: false, message: "Could not update contact sharing approval." });
+  } finally {
+    client.release();
   }
 });
 
