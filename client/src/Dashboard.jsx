@@ -142,7 +142,7 @@ export default function Dashboard({ user, onLogout }) {
 
   return <section className="dashboard">
     <div className="dashboard-heading">
-      <div><p className="dash-eyebrow">YOUR NITHYASEVA WORKSPACE</p><h1>Hello, <span>{user.full_name?.split(' ')[0] || 'there'}</span></h1><p>Manage opportunities, work, and your account from one place.</p></div>
+      <div><p className="dash-eyebrow">YOUR NITHYASEVA WORKSPACE</p><h1>Hello, <span>{user.full_name || 'there'}</span></h1><p>Manage opportunities, work, and your account from one place.</p></div>
       <button className="dash-refresh" onClick={load} disabled={loading}>{loading ? 'Refreshing…' : '↻ Refresh'}</button>
     </div>
     <div className="dash-tabs">{tabs.map(([id, label]) => <button key={id} className={section === id ? 'selected' : ''} onClick={() => setSection(id)}>{label}</button>)}</div>
