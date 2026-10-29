@@ -171,7 +171,7 @@ router.post("/:id/applications", requireAuth, requireRole("worker"), async (req,
   if (proposedPrice !== null && (!Number.isFinite(proposedPrice) || proposedPrice < 0 || proposedPrice > 100000000)) return res.status(400).json({ success: false, message: "Proposed price must be a non-negative amount." });
   if (message && message.length > 3000) return res.status(400).json({ success: false, message: "Application message must be at most 3,000 characters." });
   try {
-    const job = await pool.query("SELECT id, customer_id, status FROM jobs WHERE id = $1", [req.params.id]);
+    const job = await pool.query("SELECT id, customer_id, title, status FROM jobs WHERE id = $1", [req.params.id]);
     if (!job.rowCount || job.rows[0].status !== "open") return res.status(404).json({ success: false, message: "Open job not found." });
     if (String(job.rows[0].customer_id) === String(req.user.id)) return res.status(403).json({ success: false, message: "You cannot apply to your own job." });
     const profile = await pool.query("SELECT availability_status FROM worker_profiles WHERE user_id = $1", [req.user.id]);
@@ -189,7 +189,7 @@ router.post("/:id/applications", requireAuth, requireRole("worker"), async (req,
     );
     await pool.query(
       "INSERT INTO notifications (user_id, notification_type, title, message, related_job_id) VALUES ($1, 'job.application', 'New job application', $2, $3)",
-      [job.rows[0].customer_id, "A worker has applied to your job.", req.params.id]
+      [job.rows[0].customer_id, (await pool.query("SELECT full_name FROM users WHERE id = $1", [req.user.id])).rows[0]?.full_name + " applied to your job: " + job.rows[0].title + ".", req.params.id]
     );
     res.status(201).json({ success: true, message: "Application submitted.", application: result.rows[0] });
   } catch (error) {
@@ -253,7 +253,7 @@ router.post("/:id/applications/:applicationId/accept", requireAuth, requireRole(
       return res.status(409).json({ success: false, message: "This job already has all requested workers." });
     }
     const appResult = await client.query(
-      "SELECT a.*, u.account_status FROM job_applications a JOIN users u ON u.id = a.worker_id WHERE a.id = $1 AND a.job_id = $2 FOR UPDATE",
+      "SELECT a.*, u.account_status, u.full_name AS worker_name FROM job_applications a JOIN users u ON u.id = a.worker_id WHERE a.id = $1 AND a.job_id = $2 FOR UPDATE",
       [req.params.applicationId, req.params.id]
     );
     const application = appResult.rows[0];
@@ -318,7 +318,7 @@ router.post("/:id/applications/:applicationId/accept", requireAuth, requireRole(
     await client.query("UPDATE worker_profiles SET availability_status = 'busy', updated_at = NOW() WHERE user_id = $1", [application.worker_id]);
     await client.query(
       "INSERT INTO notifications (user_id, notification_type, title, message, related_job_id) VALUES ($1, 'application.accepted', 'Your application was accepted', $2, $3)",
-      [application.worker_id, "The customer accepted your application and created a job agreement.", job.id]
+      [application.worker_id, (await client.query("SELECT full_name FROM users WHERE id = $1", [job.customer_id])).rows[0]?.full_name + " accepted your application for: " + job.title + ".", job.id]
     );
     await client.query("INSERT INTO audit_logs (actor_user_id, action, entity_type, entity_id) VALUES ($1, 'application.accepted', 'job', $2)", [req.user.id, String(job.id)]);
     await client.query("COMMIT");
