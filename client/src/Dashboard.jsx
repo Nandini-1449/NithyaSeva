@@ -193,9 +193,10 @@ export default function Dashboard({ user, onLogout }) {
 
     {section === 'myjobs' && user.role === 'customer' && <div className="dash-grid">{mine.map(j => {
       const workers = j.assigned_workers || [];
-      const pendingWorkerCompletion = workers.some(w => w.worker_completed_at && !w.customer_completed_at);
-      const pendingCancellation = workers.some(w => w.cancellation_requested_at && !w.cancellation_acknowledged_at && String(w.cancellation_requested_by) !== String(user.id));
-      const ownCancellation = workers.some(w => w.cancellation_requested_at && !w.cancellation_acknowledged_at && String(w.cancellation_requested_by) === String(user.id));
+      const jobIsActive = !['completed', 'cancelled'].includes(j.status);
+      const pendingWorkerCompletion = jobIsActive && workers.some(w => w.worker_completed_at && !w.customer_completed_at && !['completed', 'cancelled'].includes(w.assignment_status));
+      const pendingCancellation = jobIsActive && workers.some(w => w.cancellation_requested_at && !w.cancellation_acknowledged_at && !['completed', 'cancelled'].includes(w.assignment_status) && String(w.cancellation_requested_by) !== String(user.id));
+      const ownCancellation = jobIsActive && workers.some(w => w.cancellation_requested_at && !w.cancellation_acknowledged_at && !['completed', 'cancelled'].includes(w.assignment_status) && String(w.cancellation_requested_by) === String(user.id));
       return <article className="dash-card" key={j.id}>
         <span className="status-pill">{j.status.replaceAll('_', ' ')}</span><h3>{j.title}</h3><p>{j.description}</p>
         <p><b>Budget:</b> {money(j.budget)}</p><p><b>Workers requested:</b> {j.worker_count || 1}</p><p><b>Workers assigned:</b> {j.assigned_worker_count ?? 0}</p><p><b>Area:</b> {j.service_location}</p>
@@ -205,15 +206,15 @@ export default function Dashboard({ user, onLogout }) {
           {pendingWorkerCompletion && <p>A worker has confirmed completion. Review the before/after photos and confirm the work.</p>}
           {pendingCancellation && <p>A worker requested cancellation. Acknowledge it below to release that worker.</p>}
           {ownCancellation && <p>Your cancellation request is waiting for the worker's acknowledgement.</p>}
-          {!pendingWorkerCompletion && !pendingCancellation && !ownCancellation && <p>{j.status === 'in_progress' ? 'The job is in progress. You can request cancellation if needed.' : 'When work begins, completion and cancellation actions will appear here.'}</p>}
+          {!pendingWorkerCompletion && !pendingCancellation && !ownCancellation && <p>{j.status === 'completed' ? 'This job is completed and confirmed by both parties.' : j.status === 'cancelled' ? 'This job has been cancelled.' : j.status === 'in_progress' ? 'The job is in progress. You can request cancellation if needed.' : 'When work begins, completion and cancellation actions will appear here.'}</p>}
           <div className="dash-actions">
             {pendingWorkerCompletion && <button type="button" className="dash-primary" onClick={() => changeStatus(j.id, 'completed')}>Confirm completion</button>}
             {pendingCancellation && <button type="button" className="dash-secondary" onClick={() => changeStatus(j.id, 'cancelled')}>Acknowledge cancellation</button>}
-            {j.status === 'in_progress' && !pendingCancellation && !ownCancellation && <button type="button" className="dash-secondary" onClick={() => changeStatus(j.id, 'cancelled')}>Request cancellation</button>}
+            {jobIsActive && j.status === 'in_progress' && !pendingCancellation && !ownCancellation && <button type="button" className="dash-secondary" onClick={() => changeStatus(j.id, 'cancelled')}>Request cancellation</button>}
           </div>
         </section>
         {(j.assigned_worker_count ?? 0) >= (j.worker_count || 1) ? <div className="dash-alert good"><p>Required team is complete. {j.contact_sharing_approved_at ? 'Contact details are shared.' : 'Approve sharing so assigned workers can see your exact address and phone number.'}</p><button type="button" className={j.contact_sharing_approved_at ? 'dash-secondary' : 'dash-primary'} onClick={() => act(() => request('/jobs/' + j.id + '/share-contact', { method: 'PATCH', body: JSON.stringify({ approved: !j.contact_sharing_approved_at }) }), j.contact_sharing_approved_at ? 'Contact sharing revoked.' : 'Contact details shared with assigned workers.')}>{j.contact_sharing_approved_at ? 'Revoke contact sharing' : 'Approve sharing contact and location'}</button></div> : <p className="dash-muted">Contact and exact location sharing becomes available when all requested workers are assigned.</p>}
-        <div className="dash-actions">{j.status === 'open' && <button type="button" className="dash-primary" onClick={() => showApplications(j.id)}>View applications</button>}{['open', 'assigned', 'accepted'].includes(j.status) && <button type="button" className="dash-secondary" onClick={() => setCancelJobTarget({ id: j.id, title: j.title })}>Cancel job</button>}</div>
+        {jobIsActive && <div className="dash-actions">{j.status === 'open' && <button type="button" className="dash-primary" onClick={() => showApplications(j.id)}>View applications</button>}{['open', 'assigned', 'accepted'].includes(j.status) && <button type="button" className="dash-secondary" onClick={() => setCancelJobTarget({ id: j.id, title: j.title })}>Cancel job</button>}</div>}
       </article>
     })}{!mine.length && <Empty text="You have not posted any jobs yet. Use “Post a job” to get started." />}</div>}
 
