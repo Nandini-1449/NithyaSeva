@@ -11,7 +11,7 @@ function VoiceAssistant({ language, onLanguageChange, onStart, busy, status, tra
   return <section className="voice-assistant" aria-label="AI voice assistant">
     <div className="voice-assistant-copy">
       <strong>Fill with your voice</strong>
-      <span>Speak naturally. AI translates to English and fills the form for you.</span>
+      <span>Speak in your language. The form will be filled in that same language.</span>
     </div>
     <div className="voice-assistant-controls">
       <select aria-label="Choose your speaking language" value={language} onChange={e => onLanguageChange(e.target.value)}>
@@ -23,7 +23,7 @@ function VoiceAssistant({ language, onLanguageChange, onStart, busy, status, tra
     </div>
     <p className="voice-assistant-status" role="status">{busy ? 'Listening or translating…' : status || 'Tap the microphone and describe the details.'}</p>
     {transcript && <p className="voice-transcript"><b>Recognised speech:</b> {transcript}</p>}
-    <small>Check the translated fields before saving. The recognised text is sent to the configured AI service for translation.</small>
+    <small>Review the fields in your language before saving. Only the recognised text is sent to the configured AI service.</small>
   </section>
 }
 
@@ -253,7 +253,7 @@ export default function Dashboard({ user, onLogout }) {
         return
       }
       setVoiceTranscript(transcript)
-      setVoiceStatus('Translating speech and identifying form fields…')
+      setVoiceStatus('Understanding your speech and filling form fields…')
       try {
         const data = await request('/voice/translate', {
           method: 'POST',
@@ -277,7 +277,7 @@ export default function Dashboard({ user, onLogout }) {
           }))
         }
         const count = Object.keys(fields).length
-        setVoiceStatus(count ? `Translated to English and filled ${count} field(s). Please review them.` : 'I could not identify form details. Try describing them more clearly.')
+        setVoiceStatus(count ? `Filled ${count} field(s) in your selected language. Please review them.` : 'I could not identify form details. Try describing them more clearly.')
       } catch (e) {
         setVoiceStatus(e.message || 'Translation failed. Please try again.')
       } finally {
