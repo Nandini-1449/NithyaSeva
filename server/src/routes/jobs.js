@@ -591,6 +591,14 @@ router.patch("/:id/status", requireAuth, async (req, res) => {
         await client.query("ROLLBACK");
         return res.status(409).json({ success: false, message: "Only an accepted worker can start work on this job." });
       }
+      const agreementResult = await client.query(
+        "SELECT status FROM job_agreements WHERE job_id = $1 AND worker_id = $2",
+        [job.id, req.user.id]
+      );
+      if (!agreementResult.rowCount || agreementResult.rows[0].status !== "accepted") {
+        await client.query("ROLLBACK");
+        return res.status(409).json({ success: false, message: "Both the customer and worker must accept the cost agreement before work can start." });
+      }
       await client.query("UPDATE job_assignments SET status = 'in_progress' WHERE id = $1", [assignment.id]);
       await client.query("UPDATE jobs SET status = 'in_progress', updated_at = NOW() WHERE id = $1", [job.id]);
       await client.query("COMMIT");
