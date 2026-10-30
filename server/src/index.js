@@ -7,6 +7,7 @@ const jobRoutes = require("./routes/jobs");
 const trustRoutes = require("./routes/trust");
 const workProofRoutes = require("./routes/workProof");
 const phase5Routes = require("./routes/phase5");
+const voiceRoutes = require("./routes/voice");
 
 const app = express();
 const PORT = Number(process.env.PORT || 5000);
@@ -55,6 +56,7 @@ app.use("/api/jobs", jobRoutes);
 app.use("/api", trustRoutes);
 app.use("/api/work-proof", workProofRoutes);
 app.use("/api", phase5Routes);
+app.use("/api/voice", voiceRoutes);
 
 app.use((req, res) => {
   res.status(404).json({ success: false, message: "API endpoint not found." });
