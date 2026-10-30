@@ -258,20 +258,20 @@ router.post("/:id/workers/:workerId/agreement/accept", requireAuth, async (req, 
     }
     const updated = await client.query(
       `UPDATE job_agreements
-       SET customer_accepted_at = CASE WHEN $3 THEN COALESCE(customer_accepted_at, NOW()) ELSE customer_accepted_at END,
-           worker_accepted_at = CASE WHEN $4 THEN COALESCE(worker_accepted_at, NOW()) ELSE worker_accepted_at END,
+       SET customer_accepted_at = CASE WHEN $2 THEN COALESCE(customer_accepted_at, NOW()) ELSE customer_accepted_at END,
+           worker_accepted_at = CASE WHEN $3 THEN COALESCE(worker_accepted_at, NOW()) ELSE worker_accepted_at END,
            status = CASE
-             WHEN (customer_accepted_at IS NOT NULL OR $3) AND (worker_accepted_at IS NOT NULL OR $4) THEN 'accepted'
+             WHEN (customer_accepted_at IS NOT NULL OR $2) AND (worker_accepted_at IS NOT NULL OR $3) THEN 'accepted'
              ELSE 'proposed'
            END,
            accepted_at = CASE
-             WHEN (customer_accepted_at IS NOT NULL OR $3) AND (worker_accepted_at IS NOT NULL OR $4) THEN NOW()
+             WHEN (customer_accepted_at IS NOT NULL OR $2) AND (worker_accepted_at IS NOT NULL OR $3) THEN NOW()
              ELSE NULL
            END,
            updated_at = NOW()
        WHERE id = $1
        RETURNING *`,
-      [agreement.id, req.user.id, isCustomer, isWorker]
+      [agreement.id, isCustomer, isWorker]
     );
     const confirmed = updated.rows[0].status === "accepted";
     if (confirmed) {
