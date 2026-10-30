@@ -1,6 +1,32 @@
 import { useCallback, useEffect, useState } from 'react'
 import './Dashboard.css'
 
+const VOICE_LANGUAGES = [
+  ['te-IN', 'Telugu'], ['hi-IN', 'Hindi'], ['ta-IN', 'Tamil'],
+  ['kn-IN', 'Kannada'], ['ml-IN', 'Malayalam'], ['bn-IN', 'Bengali'],
+  ['mr-IN', 'Marathi'], ['en-IN', 'English'],
+]
+
+function VoiceAssistant({ language, onLanguageChange, onStart, busy, status, transcript }) {
+  return <section className="voice-assistant" aria-label="AI voice assistant">
+    <div className="voice-assistant-copy">
+      <strong>Fill with your voice</strong>
+      <span>Speak naturally. AI translates to English and fills the form for you.</span>
+    </div>
+    <div className="voice-assistant-controls">
+      <select aria-label="Choose your speaking language" value={language} onChange={e => onLanguageChange(e.target.value)}>
+        {VOICE_LANGUAGES.map(([code, name]) => <option key={code} value={code}>{name}</option>)}
+      </select>
+      <button type="button" className={`voice-mic-button ${busy ? 'is-listening' : ''}`} onClick={onStart} disabled={busy} aria-label={busy ? 'Voice assistant is working' : 'Start voice input'} title="Speak to fill this form">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="2.5" width="6" height="12" rx="3"/><path d="M5.5 11.5a6.5 6.5 0 0013 0M12 18v3.5M8.5 21.5h7"/></svg>
+      </button>
+    </div>
+    <p className="voice-assistant-status" role="status">{busy ? 'Listening or translating…' : status || 'Tap the microphone and describe the details.'}</p>
+    {transcript && <p className="voice-transcript"><b>Recognised speech:</b> {transcript}</p>}
+    <small>Check the translated fields before saving. Speech is sent to the configured AI service for translation.</small>
+  </section>
+}
+
 const API = import.meta.env.VITE_API_URL || 'http://localhost:5000/api'
 
 export default function Dashboard({ user, onLogout }) {
@@ -27,6 +53,10 @@ export default function Dashboard({ user, onLogout }) {
   const [phase5, setPhase5] = useState({ payments: [], entries: [], totals: {}, disputes: [] })
   const [paymentWorkerId, setPaymentWorkerId] = useState('')
   const [trustForm, setTrustForm] = useState({ jobId: '', amount: '', paymentMethod: 'cash', rating: '5', comment: '', reason: 'Work quality', description: '' })
+  const [voiceLanguage, setVoiceLanguage] = useState('te-IN')
+  const [voiceBusy, setVoiceBusy] = useState(false)
+  const [voiceStatus, setVoiceStatus] = useState('')
+  const [voiceTranscript, setVoiceTranscript] = useState('')
 
   const request = useCallback(async (path, options = {}) => {
     const token = localStorage.getItem('nithyaseva_token')
@@ -198,6 +228,78 @@ export default function Dashboard({ user, onLogout }) {
     await act(() => request('/workers/me', { method: 'PUT', body: JSON.stringify({ ...profile, skills: Array.isArray(profile.skills) ? profile.skills : String(profile.skills).split(',').map(s => s.trim()).filter(Boolean), experienceYears: Number(profile.experienceYears), hourlyRate: profile.hourlyRate === '' ? null : Number(profile.hourlyRate) }) }), 'Worker profile saved.')
   }
 
+  async function startVoiceInput(context) {
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition
+    if (!SpeechRecognition) {
+      setVoiceStatus('Voice input is not supported in this browser. Please use the latest Chrome or Edge.')
+      return
+    }
+    const recognition = new SpeechRecognition()
+    recognition.lang = voiceLanguage
+    recognition.continuous = false
+    recognition.interimResults = false
+    recognition.maxAlternatives = 1
+    setVoiceBusy(true)
+    setVoiceStatus('Listening… speak clearly in your selected language.')
+    setVoiceTranscript('')
+    recognition.onresult = async event => {
+      const transcript = event.results?.[0]?.[0]?.transcript?.trim()
+      if (!transcript) {
+        setVoiceStatus('No speech was recognised. Please try again.')
+        setVoiceBusy(false)
+        return
+      }
+      setVoiceTranscript(transcript)
+      setVoiceStatus('Translating speech and identifying form fields…')
+      try {
+        const data = await request('/voice/translate', {
+          method: 'POST',
+          body: JSON.stringify({ context, language: voiceLanguage, transcript })
+        })
+        const fields = data.fields || {}
+        if (context === 'customer_job') {
+          setJobForm(prev => ({
+            ...prev,
+            ...fields,
+            budget: fields.budget === undefined ? prev.budget : String(fields.budget),
+            workerCount: fields.workerCount === undefined ? prev.workerCount : String(fields.workerCount),
+          }))
+        } else {
+          setProfile(prev => ({
+            ...prev,
+            ...fields,
+            skills: fields.skills === undefined ? prev.skills : fields.skills,
+            experienceYears: fields.experienceYears === undefined ? prev.experienceYears : String(fields.experienceYears),
+            hourlyRate: fields.hourlyRate === undefined ? prev.hourlyRate : String(fields.hourlyRate),
+          }))
+        }
+        const count = Object.keys(fields).length
+        setVoiceStatus(count ? `Translated to English and filled ${count} field(s). Please review them.` : 'I could not identify form details. Try describing them more clearly.')
+      } catch (e) {
+        setVoiceStatus(e.message || 'Translation failed. Please try again.')
+      } finally {
+        setVoiceBusy(false)
+      }
+    }
+    recognition.onerror = event => {
+      setVoiceStatus(event.error === 'not-allowed'
+        ? 'Microphone permission was blocked. Allow microphone access in your browser settings.'
+        : event.error === 'no-speech'
+          ? 'No speech was detected. Tap the mic and try again.'
+          : 'Voice recognition failed. Please try again.')
+      setVoiceBusy(false)
+    }
+    recognition.onend = () => {
+      // The result handler manages the busy state while translation is in progress.
+    }
+    try {
+      recognition.start()
+    } catch {
+      setVoiceBusy(false)
+      setVoiceStatus('Could not start the microphone. Please try again.')
+    }
+  }
+
   async function markRead(id) {
     await act(() => request('/notifications/' + id + '/read', { method: 'PATCH', body: '{}' }), 'Notification marked as read.')
   }
@@ -223,7 +325,7 @@ export default function Dashboard({ user, onLogout }) {
 
     {section === 'jobs' && user.role === 'worker' && <><div className="job-discovery-controls"><label>Search jobs<input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search by title, description or category" /></label><div className="job-discovery-actions"><button type="button" className={jobLocationMode === 'all' ? 'dash-primary' : 'dash-secondary'} onClick={() => { setJobLocationMode('all'); setMessage('Showing all open jobs.'); setError('') }}>All Jobs</button><button type="button" className={jobLocationMode === 'nearby' ? 'dash-primary' : 'dash-secondary'} onClick={enableNearbyJobs}>Near Me</button><label>Distance<select value={nearbyRadius} onChange={e => setNearbyRadius(e.target.value)}><option value="5">Within 5 km</option><option value="10">Within 10 km</option><option value="25">Within 25 km</option><option value="50">Within 50 km</option><option value="100">Within 100 km</option><option value="200">Within 200 km</option></select></label></div>{jobLocationMode === 'nearby' && !currentCoordinates && <p className="dash-muted">Choose Near Me to share your location for distance filtering.</p>}</div><div className="dash-grid listing-row">{jobs.filter(j => jobMatchesSearch(j, search)).map(j => <article className="dash-card listing-card" key={j.id} role="button" tabIndex={0} onClick={() => setSelectedDetail({ type: 'job', item: j })} onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setSelectedDetail({ type: 'job', item: j }) } }}><span className="status-pill">{j.status}</span><h3>{j.title}</h3><p>{j.description}</p><p><b>Category:</b> {j.category}</p><p><b>Location:</b> {j.service_location}</p>{j.distance_km != null && <p><b>Distance:</b> {j.distance_km} km away</p>}<p><b>Budget:</b> {money(j.budget)}</p><p className="dash-muted">Posted by {j.customer_name || 'Customer'} · {new Date(j.created_at).toLocaleDateString()}</p>{user.role === 'worker' && (applyForm.jobId === String(j.id) ? <form className="dash-form application-form" onSubmit={e => submitApplication(e, j.id)}><h4>Apply for this job</h4><label>Proposed price in INR (optional)<input type="number" min="0" step="0.01" value={applyForm.proposedPrice} onChange={e => setApplyForm({ ...applyForm, proposedPrice: e.target.value })} placeholder="Leave blank to use the customer budget" /></label><label>Short message to the customer (optional)<textarea rows="3" maxLength="1500" spellCheck="true" value={applyForm.message} onChange={e => setApplyForm({ ...applyForm, message: capitalizeText(e.target.value) })} onBlur={e => e.target.value && setApplyForm(f => ({ ...f, message: capitalizeText(e.target.value) }))} placeholder="Describe how you can help with this job" /></label><div className="application-form-actions"><button className="dash-primary" type="submit" disabled={loading}>Send application</button><button className="dash-secondary" type="button" onClick={() => setApplyForm({ jobId: '', proposedPrice: '', message: '' })}>Cancel</button></div></form> : <button className="dash-primary" onClick={e => { e.stopPropagation(); apply(j.id) }}>Apply for this job ↗</button>)}</article>)}{!jobs.length && <Empty text={jobLocationMode === 'nearby' ? 'No jobs with saved coordinates were found within this distance. Try a larger distance or All Jobs.' : 'No open jobs at the moment. Please check back later.'} />}</div></>}
 
-    {section === 'post' && user.role === 'customer' && <form className="dash-form" onSubmit={createJob}><h2>Post a new job</h2><p>Describe the work clearly so workers can decide whether to apply.</p><label>Job title<input required maxLength="160" spellCheck="true" value={jobForm.title} onChange={e => setJobForm({ ...jobForm, title: capitalizeText(e.target.value) })} onBlur={e => e.target.value && setJobForm(f => ({ ...f, title: capitalizeText(e.target.value) }))} placeholder="e.g. Repair a leaking kitchen tap" /></label><label>Category<select required value={jobForm.category} onChange={e => setJobForm({ ...jobForm, category: e.target.value })}>{['Household services','Society / apartment services','Construction and building work','Plumbing','Electrical work','Cleaning and housekeeping','Painting','Carpentry','Gardening and outdoor work','Moving and loading','Security services','Elderly care and assistance','Other services'].map(category => <option key={category} value={category}>{category}</option>)}</select></label><label>Work description<textarea required maxLength="10000" rows="4" spellCheck="true" value={jobForm.description} onChange={e => setJobForm({ ...jobForm, description: capitalizeText(e.target.value) })} onBlur={e => e.target.value && setJobForm(f => ({ ...f, description: capitalizeText(e.target.value) }))} /></label><label>Service location (area/locality)<input required maxLength="1000" spellCheck="true" value={jobForm.serviceLocation} onChange={e => setJobForm({ ...jobForm, serviceLocation: capitalizeText(e.target.value) })} onBlur={e => e.target.value && setJobForm(f => ({ ...f, serviceLocation: capitalizeText(e.target.value) }))} placeholder="e.g. Kukatpally, Hyderabad" /></label><label>Exact job address (private)<textarea required maxLength="2000" rows="3" spellCheck="true" value={jobForm.exactAddress} onChange={e => setJobForm({ ...jobForm, exactAddress: e.target.value })} placeholder="House/flat number, street, landmark and full address" /></label><p className="dash-muted">Your exact address stays private. Assigned workers can see it only after the requested team is complete and you approve sharing.</p><div className="optional-location"><button type="button" className="dash-secondary" onClick={enableNearbyJobs}>{currentCoordinates ? '✓ Location attached for nearby search' : 'Optional: use my location for nearby search'}</button><p className="dash-muted">Only approximate coordinates supplied by your browser are saved with this job. You can skip this.</p></div><label>Number of workers needed<input required type="number" min="1" max="10000" step="1" value={jobForm.workerCount} onChange={e => setJobForm({ ...jobForm, workerCount: e.target.value })} /></label><label>Budget in INR (optional)<input type="number" min="0" step="0.01" value={jobForm.budget} onChange={e => setJobForm({ ...jobForm, budget: e.target.value })} /></label><button className="dash-primary" disabled={loading}>Publish job</button></form>}
+    {section === 'post' && user.role === 'customer' && <form className="dash-form" onSubmit={createJob}><h2>Post a new job</h2><p>Describe the work clearly so workers can decide whether to apply.</p><VoiceAssistant language={voiceLanguage} onLanguageChange={setVoiceLanguage} onStart={() => startVoiceInput('customer_job')} busy={voiceBusy} status={voiceStatus} transcript={voiceTranscript} /><label>Job title<input required maxLength="160" spellCheck="true" value={jobForm.title} onChange={e => setJobForm({ ...jobForm, title: capitalizeText(e.target.value) })} onBlur={e => e.target.value && setJobForm(f => ({ ...f, title: capitalizeText(e.target.value) }))} placeholder="e.g. Repair a leaking kitchen tap" /></label><label>Category<select required value={jobForm.category} onChange={e => setJobForm({ ...jobForm, category: e.target.value })}>{['Household services','Society / apartment services','Construction and building work','Plumbing','Electrical work','Cleaning and housekeeping','Painting','Carpentry','Gardening and outdoor work','Moving and loading','Security services','Elderly care and assistance','Other services'].map(category => <option key={category} value={category}>{category}</option>)}</select></label><label>Work description<textarea required maxLength="10000" rows="4" spellCheck="true" value={jobForm.description} onChange={e => setJobForm({ ...jobForm, description: capitalizeText(e.target.value) })} onBlur={e => e.target.value && setJobForm(f => ({ ...f, description: capitalizeText(e.target.value) }))} /></label><label>Service location (area/locality)<input required maxLength="1000" spellCheck="true" value={jobForm.serviceLocation} onChange={e => setJobForm({ ...jobForm, serviceLocation: capitalizeText(e.target.value) })} onBlur={e => e.target.value && setJobForm(f => ({ ...f, serviceLocation: capitalizeText(e.target.value) }))} placeholder="e.g. Kukatpally, Hyderabad" /></label><label>Exact job address (private)<textarea required maxLength="2000" rows="3" spellCheck="true" value={jobForm.exactAddress} onChange={e => setJobForm({ ...jobForm, exactAddress: e.target.value })} placeholder="House/flat number, street, landmark and full address" /></label><p className="dash-muted">Your exact address stays private. Assigned workers can see it only after the requested team is complete and you approve sharing.</p><div className="optional-location"><button type="button" className="dash-secondary" onClick={enableNearbyJobs}>{currentCoordinates ? '✓ Location attached for nearby search' : 'Optional: use my location for nearby search'}</button><p className="dash-muted">Only approximate coordinates supplied by your browser are saved with this job. You can skip this.</p></div><label>Number of workers needed<input required type="number" min="1" max="10000" step="1" value={jobForm.workerCount} onChange={e => setJobForm({ ...jobForm, workerCount: e.target.value })} /></label><label>Budget in INR (optional)<input type="number" min="0" step="0.01" value={jobForm.budget} onChange={e => setJobForm({ ...jobForm, budget: e.target.value })} /></label><button className="dash-primary" disabled={loading}>Publish job</button></form>}
 
     {section === 'myjobs' && user.role === 'customer' && <div className="dash-grid">{mine.map(j => {
       const workers = j.assigned_workers || [];
@@ -258,7 +360,7 @@ export default function Dashboard({ user, onLogout }) {
 
     {section === 'mywork' && user.role === 'worker' && <div className="dash-grid">{assignments.filter(a => !['completed', 'cancelled'].includes(a.assignment_status)).map(a => <article className="dash-card" key={a.assignment_id}><span className="status-pill">{a.assignment_status.replaceAll('_', ' ')}</span><h3>{a.title}</h3><p>{a.description}</p><p><b>Customer:</b> {a.customer_name}</p><p><b>Area:</b> {a.service_location}</p><section className="dash-alert"><h4>Payment agreement</h4><p><b>Customer:</b> {a.customer_name}</p><p><b>Worker:</b> {user.full_name}</p><p><b>Agreed amount:</b> {a.agreed_price != null ? money(a.agreed_price) : 'Awaiting customer to record the agreed price'}</p><p><b>Status:</b> {a.agreed_price != null ? 'Price recorded' : 'Not yet agreed'}</p><p className="dash-muted">This is a shared project record of the agreed price, not a digital signature or proof of payment.</p></section>{a.contact_details_shared ? <div className="dash-alert good"><p><b>Exact job address:</b> {a.exact_address}</p><p><b>Customer phone:</b> {a.customer_phone || 'Not provided'}</p></div> : <p className="dash-muted">Exact address and phone appear after the customer approves contact sharing.</p>}<section className="dash-alert"><b>Work progress actions</b><p>{a.worker_completed_at ? 'You have confirmed completion. Waiting for the customer.' : a.assignment_status === 'accepted' ? 'Start the job when you begin work. Upload before and after photos before confirming completion.' : 'Upload before and after photos, then confirm completion.'}</p><div className="dash-actions">{a.assignment_status === 'accepted' && <button type="button" className="dash-primary" onClick={() => changeStatus(a.job_id, 'in_progress')}>Start work</button>}{['accepted', 'in_progress'].includes(a.assignment_status) && <button type="button" className="dash-primary" onClick={() => changeStatus(a.job_id, 'completed')} disabled={Boolean(a.worker_completed_at)}>{a.worker_completed_at ? 'Completion confirmed' : 'Confirm completion'}</button>}{a.job_status === 'in_progress' && <button type="button" className="dash-secondary" onClick={() => changeStatus(a.job_id, 'cancelled')} disabled={Boolean(a.cancellation_requested_at && String(a.cancellation_requested_by) === String(user.id))}>{!a.cancellation_requested_at ? 'Request cancellation' : String(a.cancellation_requested_by) === String(user.id) ? 'Waiting for customer acknowledgement' : 'Acknowledge cancellation'}</button>}</div></section><WorkPhotos jobId={a.job_id} request={request} mode="worker" /></article>)}{!assignments.filter(a => !['completed', 'cancelled'].includes(a.assignment_status)).length && <Empty text="You have no active assignments. Apply to an open job to get started." />}</div>}
 
-    {section === 'profile' && user.role === 'worker' && <form className="dash-form" onSubmit={saveProfile}><h2>Your worker profile</h2><p>A complete profile helps customers understand your experience and service area.</p><label>About you<textarea rows="4" maxLength="4000" spellCheck="true" value={profile.bio} onChange={e => setProfile({ ...profile, bio: capitalizeText(e.target.value) })} onBlur={e => e.target.value && setProfile(p => ({ ...p, bio: capitalizeText(e.target.value) }))} /></label><label>Skills (comma-separated)<input spellCheck="true" value={Array.isArray(profile.skills) ? profile.skills.join(', ') : profile.skills} onChange={e => setProfile({ ...profile, skills: capitalizeText(e.target.value) })} onBlur={e => e.target.value && setProfile(p => ({ ...p, skills: capitalizeText(e.target.value) }))} placeholder="Plumbing, cleaning, electrical work" /></label><label>Years of experience<input type="number" min="0" max="60" value={profile.experienceYears} onChange={e => setProfile({ ...profile, experienceYears: e.target.value })} /></label><label>Service area<input maxLength="160" spellCheck="true" value={profile.serviceArea} onChange={e => setProfile({ ...profile, serviceArea: capitalizeText(e.target.value) })} onBlur={e => e.target.value && setProfile(p => ({ ...p, serviceArea: capitalizeText(e.target.value) }))} placeholder="Your locality or service area" /></label><label>Hourly rate in INR<input type="number" min="0" step="0.01" value={profile.hourlyRate} onChange={e => setProfile({ ...profile, hourlyRate: e.target.value })} /></label><label>Availability<select value={profile.availabilityStatus} onChange={e => setProfile({ ...profile, availabilityStatus: e.target.value })}><option value="available">Available for jobs</option><option value="busy">Busy</option><option value="unavailable">Unavailable</option></select></label><button className="dash-primary" type="submit" disabled={loading}>{loading ? 'Saving...' : 'Save profile'}</button></form>}
+    {section === 'profile' && user.role === 'worker' && <form className="dash-form" onSubmit={saveProfile}><h2>Your worker profile</h2><p>A complete profile helps customers understand your experience and service area.</p><VoiceAssistant language={voiceLanguage} onLanguageChange={setVoiceLanguage} onStart={() => startVoiceInput('worker_profile')} busy={voiceBusy} status={voiceStatus} transcript={voiceTranscript} /><label>About you<textarea rows="4" maxLength="4000" spellCheck="true" value={profile.bio} onChange={e => setProfile({ ...profile, bio: capitalizeText(e.target.value) })} onBlur={e => e.target.value && setProfile(p => ({ ...p, bio: capitalizeText(e.target.value) }))} /></label><label>Skills (comma-separated)<input spellCheck="true" value={Array.isArray(profile.skills) ? profile.skills.join(', ') : profile.skills} onChange={e => setProfile({ ...profile, skills: capitalizeText(e.target.value) })} onBlur={e => e.target.value && setProfile(p => ({ ...p, skills: capitalizeText(e.target.value) }))} placeholder="Plumbing, cleaning, electrical work" /></label><label>Years of experience<input type="number" min="0" max="60" value={profile.experienceYears} onChange={e => setProfile({ ...profile, experienceYears: e.target.value })} /></label><label>Service area<input maxLength="160" spellCheck="true" value={profile.serviceArea} onChange={e => setProfile({ ...profile, serviceArea: capitalizeText(e.target.value) })} onBlur={e => e.target.value && setProfile(p => ({ ...p, serviceArea: capitalizeText(e.target.value) }))} placeholder="Your locality or service area" /></label><label>Hourly rate in INR<input type="number" min="0" step="0.01" value={profile.hourlyRate} onChange={e => setProfile({ ...profile, hourlyRate: e.target.value })} /></label><label>Availability<select value={profile.availabilityStatus} onChange={e => setProfile({ ...profile, availabilityStatus: e.target.value })}><option value="available">Available for jobs</option><option value="busy">Busy</option><option value="unavailable">Unavailable</option></select></label><button className="dash-primary" type="submit" disabled={loading}>{loading ? 'Saving...' : 'Save profile'}</button></form>}
 
 
     {section === 'trust' && <div className="dash-grid">
