@@ -144,3 +144,20 @@
 .chat-no-selection p{max-width:320px;font-size:12px;line-height:1.7}
 .chat-error{grid-column:1/-1}
 @media(max-width:720px){.chat-center{grid-template-columns:1fr;min-height:0}.chat-list{max-height:240px;overflow-y:auto}.chat-window{min-height:430px}.chat-message-list{max-height:340px}}
+
+
+/* Dashboard surfaces follow the global theme selection. */
+:root[data-theme="dark"] .dashboard{color:var(--ink)}
+:root[data-theme="dark"] .dash-card,:root[data-theme="dark"] .dash-form,:root[data-theme="dark"] .dash-empty,:root[data-theme="dark"] .job-discovery-controls,:root[data-theme="dark"] .dash-refresh,:root[data-theme="dark"] .dash-secondary{background:#18251e!important;color:var(--ink)!important;border-color:var(--line)!important}
+:root[data-theme="dark"] .dash-card p,:root[data-theme="dark"] .dash-muted,:root[data-theme="dark"] .dash-card p b,:root[data-theme="dark"] .dash-form label,:root[data-theme="dark"] .job-discovery-controls label{color:var(--muted)!important}
+:root[data-theme="dark"] .dash-form input,:root[data-theme="dark"] .dash-form textarea,:root[data-theme="dark"] .dash-form select,:root[data-theme="dark"] .job-discovery-controls input,:root[data-theme="dark"] .job-discovery-controls select,:root[data-theme="dark"] .agreement-form input,:root[data-theme="dark"] .agreement-form textarea{background:#101a14!important;color:var(--ink)!important;border-color:var(--line)!important}
+:root[data-theme="dark"] .cost-agreement{background:#142119;border-color:var(--line)}
+:root[data-theme="dark"] .cost-agreement-heading h4,:root[data-theme="dark"] .agreement-form label{color:var(--ink)}
+:root[data-theme="dark"] .chat-list,:root[data-theme="dark"] .chat-window{background:var(--card);border-color:var(--line)}
+:root[data-theme="dark"] .chat-message-list{background:var(--surface)}
+:root[data-theme="dark"] .chat-conversation{color:var(--ink);border-color:var(--line)}
+:root[data-theme="dark"] .chat-conversation:hover,:root[data-theme="dark"] .chat-conversation.selected{background:#203b2c}
+:root[data-theme="dark"] .chat-message.theirs{background:var(--chat-other);color:var(--ink);border-color:var(--line)}
+:root[data-theme="dark"] .chat-compose textarea{background:var(--input-bg);color:var(--ink);border-color:var(--line)}
+:root[data-theme="dark"] .chat-panel-heading h2,:root[data-theme="dark"] .chat-window-heading h3,:root[data-theme="dark"] .chat-no-selection h3{color:var(--ink)}
+:root[data-theme="dark"] .application-row{border-color:var(--line)}
