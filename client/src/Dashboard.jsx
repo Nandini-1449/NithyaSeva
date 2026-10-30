@@ -324,6 +324,7 @@ function ChatCenter({ request, user }) {
   const [conversations, setConversations] = useState([]);
   const [selectedKey, setSelectedKey] = useState('');
   const [messages, setMessages] = useState([]);
+  const [chatLocked, setChatLocked] = useState(false);
   const [draft, setDraft] = useState('');
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
@@ -351,19 +352,23 @@ function ChatCenter({ request, user }) {
   }, [request]);
 
   const selectedConversation = conversations.find(item => String(item.job_id) + ':' + String(item.worker_id) === selectedKey) || null;
+  const paymentCompleted = Boolean(selectedConversation?.chat_locked || chatLocked);
 
   useEffect(() => {
     if (!selectedConversation) {
       setMessages([]);
+      setChatLocked(false);
       return undefined;
     }
     let active = true;
+    setChatLocked(Boolean(selectedConversation.chat_locked));
     const path = '/chat/jobs/' + selectedConversation.job_id + '/workers/' + selectedConversation.worker_id + '/messages';
     async function loadMessages() {
       try {
         const data = await request(path);
         if (active) {
           setMessages(data.messages || []);
+          setChatLocked(Boolean(data.chatLocked || selectedConversation.chat_locked));
           setChatError('');
         }
       } catch (error) {
@@ -387,6 +392,7 @@ function ChatCenter({ request, user }) {
       setDraft('');
       const data = await request(path);
       setMessages(data.messages || []);
+      setChatLocked(Boolean(data.chatLocked || selectedConversation.chat_locked));
     } catch (error) {
       setChatError(error.message || 'Could not send your message.');
     } finally {
@@ -417,13 +423,13 @@ function ChatCenter({ request, user }) {
             <p>{item.message}</p>
             <time>{new Date(item.created_at).toLocaleString()}</time>
           </div>)}
-          {!messages.length && <p className="chat-empty">No messages yet. Send a message to discuss the job.</p>}
+          {!messages.length && <p className="chat-empty">No messages yet. You can discuss the job here before payment.</p>}
         </div>
-        <form className="chat-compose" onSubmit={sendMessage}>
+        {paymentCompleted ? <p className="dash-alert good">Payment has been recorded. This conversation is now read-only; neither participant can send new messages.</p> : <form className="chat-compose" onSubmit={sendMessage}>
           <textarea value={draft} onChange={event => setDraft(event.target.value)} maxLength={2000} rows="2" placeholder="Write a message…" aria-label="Write a message" />
           <button className="dash-primary" type="submit" disabled={sending || !draft.trim()}>{sending ? 'Sending…' : 'Send'}</button>
-        </form>
-        <p className="chat-footnote">Messages refresh automatically. Keep communication respectful and relevant to this job.</p>
+        </form>}
+        <p className="chat-footnote">Messages refresh automatically. Chat closes for both participants after payment is recorded.</p>
       </> : <div className="chat-no-selection"><span>✉</span><h3>Your job conversations</h3><p>Select a conversation to read and reply. Only the customer and assigned worker can access it.</p></div>}
     </div>
     {chatError && <p className="dash-alert bad chat-error" role="alert">{chatError}</p>}
