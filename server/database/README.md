@@ -67,7 +67,7 @@ This migration does not change the login/register routes, remove existing tables
 After the earlier marketplace migrations have been applied, run this additive migration on the existing database. It preserves existing agreements and makes the agreement unique per job and assigned worker.
 
 ```sql
-\\i 'C:/Users/HP/NithyaSeva/server/database/migrations/008_two_party_cost_agreements.sql'
+\i 'C:/Users/HP/NithyaSeva/server/database/migrations/008_two_party_cost_agreements.sql'
 ```
 
 Migration 008 adds the advance amount and separate customer/worker acceptance timestamps. Existing accepted agreements are retained as historical mutually accepted records. New agreements remain pending until both parties accept. Do not drop or recreate the database.
