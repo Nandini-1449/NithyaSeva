@@ -203,6 +203,9 @@ export default function Dashboard({ user, onLogout }) {
   }
 
   const money = value => value === null || value === undefined || value === '' ? 'Negotiable' : '₹' + Number(value).toLocaleString('en-IN')
+  const demoQrPayload = trustForm.jobId && paymentWorkerId && Number(trustForm.amount) > 0
+    ? `NITHYASEVA DEMO ONLY | Job #${trustForm.jobId} | Worker #${paymentWorkerId} | Amount INR ${Number(trustForm.amount).toFixed(2)} | NOT A REAL PAYMENT`
+    : ''
   const tabs = user.role === 'admin'
     ? [['trust', 'Dispute management']]
     : user.role === 'customer'
@@ -274,7 +277,19 @@ export default function Dashboard({ user, onLogout }) {
         <label>Completed job<select required value={trustForm.jobId} onChange={e => { setTrustForm({...trustForm,jobId:e.target.value}); setPaymentWorkerId('') }}><option value="">Choose a completed job</option>{mine.filter(j => j.status === 'completed').map(j => <option key={j.id} value={j.id}>{j.title} (#{j.id})</option>)}</select></label>
         <label>Worker<select required value={paymentWorkerId} onChange={e => setPaymentWorkerId(e.target.value)}><option value="">Choose worker</option>{(mine.find(j => String(j.id) === String(trustForm.jobId))?.assigned_workers || []).filter(w => w.assignment_status === 'completed').map(w => <option key={w.worker_id} value={w.worker_id}>{w.worker_name}</option>)}</select></label>
         <label>Amount (₹)<input required type="number" min="0.01" step="0.01" value={trustForm.amount} onChange={e => setTrustForm({...trustForm,amount:e.target.value})}/></label>
-        <button className="dash-primary" type="submit">Simulate online payment</button></form></article>}
+        {demoQrPayload && <div className="demo-qr-panel">
+          <h4>Scan this demo QR code</h4>
+          <img
+            src={`https://api.qrserver.com/v1/create-qr-code/?size=240x240&data=${encodeURIComponent(demoQrPayload)}`}
+            alt="QR code containing NithyaSeva demo payment details only"
+            width="240"
+            height="240"
+            loading="lazy"
+          />
+          <p className="dash-muted">This QR contains demo job and amount details only. Scanning it will not open a UPI app or transfer money.</p>
+          <p className="dash-muted"><b>Demo amount:</b> {money(trustForm.amount)}</p>
+        </div>}
+        <button className="dash-primary" type="submit">Confirm demo scan &amp; record payment</button></form></article>}
       <article className="dash-card"><h3>Submit a review</h3><p className="dash-muted">Reviews are allowed after a completed job, once per participant.</p><form className="dash-form" onSubmit={e => { e.preventDefault(); submitTrustAction('/jobs/' + trustForm.jobId + '/reviews', { rating:Number(trustForm.rating), comment:trustForm.comment }, 'Review submitted.') }}>
         <label>Completed job<select required value={trustForm.jobId} onChange={e => setTrustForm({...trustForm,jobId:e.target.value})}><option value="">Choose a completed job</option>{(user.role === 'customer' ? mine.filter(j => j.status === 'completed') : assignments.filter(a => a.job_status === 'completed')).map(j => <option key={j.id || j.job_id} value={j.id || j.job_id}>{j.title} (#{j.id || j.job_id})</option>)}</select></label>
         <label>Rating<select value={trustForm.rating} onChange={e => setTrustForm({...trustForm,rating:e.target.value})}>{[5,4,3,2,1].map(n => <option key={n} value={n}>{n} / 5</option>)}</select></label>
