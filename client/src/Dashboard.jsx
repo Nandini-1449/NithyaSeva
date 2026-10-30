@@ -25,6 +25,7 @@ export default function Dashboard({ user, onLogout }) {
   const [cancelJobTarget, setCancelJobTarget] = useState(null)
   const [selectedDetail, setSelectedDetail] = useState(null)
   const [phase5, setPhase5] = useState({ payments: [], entries: [], totals: {}, disputes: [] })
+  const [paymentWorkerId, setPaymentWorkerId] = useState('')
   const [trustForm, setTrustForm] = useState({ jobId: '', amount: '', paymentMethod: 'cash', rating: '5', comment: '', reason: 'Work quality', description: '' })
 
   const request = useCallback(async (path, options = {}) => {
@@ -89,6 +90,45 @@ export default function Dashboard({ user, onLogout }) {
   async function submitTrustAction(path, body, success) {
     const ok = await act(() => request(path, { method: 'POST', body: JSON.stringify(body) }), success)
     if (ok) { await loadPhase5(); setTrustForm({ jobId: '', amount: '', paymentMethod: 'cash', rating: '5', comment: '', reason: 'Work quality', description: '' }) }
+  }
+
+  async function startOnlinePayment(e) {
+    e.preventDefault()
+    setMessage(''); setError('')
+    try {
+      const config = await request('/payments/razorpay/config')
+      const orderData = await request('/jobs/' + trustForm.jobId + '/razorpay/order', {
+        method: 'POST',
+        body: JSON.stringify({ workerId: Number(paymentWorkerId), amount: Number(trustForm.amount) })
+      })
+      if (!window.Razorpay) {
+        await new Promise((resolve, reject) => {
+          const script = document.createElement('script')
+          script.src = 'https://checkout.razorpay.com/v1/checkout.js'
+          script.onload = resolve
+          script.onerror = () => reject(new Error('Could not load secure Razorpay checkout.'))
+          document.body.appendChild(script)
+        })
+      }
+      const checkout = new window.Razorpay({
+        key: config.keyId,
+        amount: orderData.order.amount,
+        currency: orderData.order.currency,
+        name: 'NithyaSeva',
+        description: 'Payment for completed work',
+        order_id: orderData.order.id,
+        handler: async response => {
+          try {
+            await request('/payments/razorpay/verify', { method: 'POST', body: JSON.stringify(response) })
+            setMessage('Payment verified successfully.')
+            await loadPhase5()
+          } catch (err) { setError(err.message || 'Payment verification failed. Contact support before retrying.') }
+        },
+        modal: { ondismiss: () => setMessage('Checkout closed. No successful payment was recorded.') },
+        theme: { color: '#2563eb' }
+      })
+      checkout.open()
+    } catch (err) { setError(err.message || 'Could not start online payment.') }
   }
 
   async function act(fn, successText) {
@@ -257,6 +297,11 @@ export default function Dashboard({ user, onLogout }) {
         <label>Completed job<select required value={trustForm.jobId} onChange={e => setTrustForm({...trustForm,jobId:e.target.value})}><option value="">Choose a completed job</option>{mine.filter(j => j.status === 'completed').map(j => <option key={j.id} value={j.id}>{j.title} (#{j.id})</option>)}</select></label>
         <label>Amount (₹)<input required type="number" min="0.01" step="0.01" value={trustForm.amount} onChange={e => setTrustForm({...trustForm,amount:e.target.value})}/></label>
         <label>Method<select value={trustForm.paymentMethod} onChange={e => setTrustForm({...trustForm,paymentMethod:e.target.value})}><option value="cash">Cash</option><option value="bank_transfer">Bank transfer</option><option value="upi">UPI (record only)</option><option value="other">Other</option></select></label><button className="dash-primary">Save pending record</button></form></article>}
+      {user.role === 'customer' && <article className="dash-card"><h3>Pay online with Razorpay</h3><p className="dash-muted">Secure checkout in test mode until your Razorpay account is activated. Choose the completed worker assignment and amount.</p><form className="dash-form" onSubmit={startOnlinePayment}>
+        <label>Completed job<select required value={trustForm.jobId} onChange={e => { setTrustForm({...trustForm,jobId:e.target.value}); setPaymentWorkerId('') }}><option value="">Choose a completed job</option>{mine.filter(j => j.status === 'completed').map(j => <option key={j.id} value={j.id}>{j.title} (#{j.id})</option>)}</select></label>
+        <label>Worker<select required value={paymentWorkerId} onChange={e => setPaymentWorkerId(e.target.value)}><option value="">Choose worker</option>{(mine.find(j => String(j.id) === String(trustForm.jobId))?.assigned_workers || []).filter(w => w.assignment_status === 'completed').map(w => <option key={w.worker_id} value={w.worker_id}>{w.worker_name}</option>)}</select></label>
+        <label>Amount (₹)<input required type="number" min="0.01" step="0.01" value={trustForm.amount} onChange={e => setTrustForm({...trustForm,amount:e.target.value})}/></label>
+        <button className="dash-primary" type="submit">Continue to secure payment</button></form></article>}
       <article className="dash-card"><h3>Submit a review</h3><p className="dash-muted">Reviews are allowed after a completed job, once per participant.</p><form className="dash-form" onSubmit={e => { e.preventDefault(); submitTrustAction('/jobs/' + trustForm.jobId + '/reviews', { rating:Number(trustForm.rating), comment:trustForm.comment }, 'Review submitted.') }}>
         <label>Completed job<select required value={trustForm.jobId} onChange={e => setTrustForm({...trustForm,jobId:e.target.value})}><option value="">Choose a completed job</option>{(user.role === 'customer' ? mine.filter(j => j.status === 'completed') : assignments.filter(a => a.job_status === 'completed')).map(j => <option key={j.id || j.job_id} value={j.id || j.job_id}>{j.title} (#{j.id || j.job_id})</option>)}</select></label>
         <label>Rating<select value={trustForm.rating} onChange={e => setTrustForm({...trustForm,rating:e.target.value})}>{[5,4,3,2,1].map(n => <option key={n} value={n}>{n} / 5</option>)}</select></label>
