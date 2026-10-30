@@ -503,8 +503,8 @@ router.post("/:id/applications/:applicationId/accept", requireAuth, requireRole(
       return res.status(409).json({ success: false, message: "This worker is already assigned to the job." });
     }
     await client.query(
-      "INSERT INTO job_assignments (job_id, worker_id, agreed_price, status) VALUES ($1,$2,$3,'accepted')",
-      [job.id, application.worker_id, agreedPrice]
+      "INSERT INTO job_assignments (job_id, worker_id, agreed_price, status) VALUES ($1,$2,NULL,'accepted')",
+      [job.id, application.worker_id]
     );
     await client.query(
       "INSERT INTO job_agreements (job_id, customer_id, worker_id, agreed_price, advance_amount, scope_of_work, status, proposed_by, customer_accepted_at) VALUES ($1,$2,$3,$4,0,$5,'proposed',$2,NOW())",
