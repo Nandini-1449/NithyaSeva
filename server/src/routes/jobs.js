@@ -131,7 +131,7 @@ router.get("/assigned/mine", requireAuth, requireRole("worker"), async (req, res
               a.cancellation_requested_by,
               j.id AS job_id, j.title, j.description, j.category, j.service_location,
               j.budget, j.scheduled_for, j.status AS job_status, j.worker_count,
-              u.full_name AS customer_name,
+              a.agreed_price, u.full_name AS customer_name,
               CASE WHEN j.status NOT IN ('completed', 'cancelled') AND j.contact_sharing_approved_at IS NOT NULL AND (SELECT COUNT(*) FROM job_assignments team WHERE team.job_id = j.id AND team.status <> 'cancelled') >= j.worker_count THEN j.exact_address ELSE NULL END AS exact_address,
               CASE WHEN j.status NOT IN ('completed', 'cancelled') AND j.contact_sharing_approved_at IS NOT NULL AND (SELECT COUNT(*) FROM job_assignments team WHERE team.job_id = j.id AND team.status <> 'cancelled') >= j.worker_count THEN u.phone ELSE NULL END AS customer_phone,
               (j.status NOT IN ('completed', 'cancelled') AND j.contact_sharing_approved_at IS NOT NULL AND (SELECT COUNT(*) FROM job_assignments team WHERE team.job_id = j.id AND team.status <> 'cancelled') >= j.worker_count) AS contact_details_shared
