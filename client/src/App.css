@@ -398,32 +398,3 @@ h2 { font-size: clamp(32px, 4vw, 43px); line-height: 1.22; margin-bottom: 0; fon
 }
 
 
-/* Floating human-figure light/dark theme switch */
-.theme-doll-toggle{position:fixed;right:22px;bottom:22px;z-index:1200;width:66px;height:66px;border:1px solid var(--line);border-radius:22px 22px 22px 8px;background:var(--card,#fff);color:var(--green);box-shadow:0 10px 28px rgba(18,55,35,.18);display:grid;place-items:center;cursor:pointer;transition:transform .2s ease,box-shadow .2s ease,background .2s ease}
-.theme-doll-toggle:hover{transform:translateY(-3px);box-shadow:0 14px 32px rgba(18,55,35,.24)}
-.theme-doll-toggle:focus-visible{outline:3px solid #83b88e;outline-offset:3px}
-.theme-doll-toggle svg{width:35px;height:43px;overflow:visible;fill:none;stroke:currentColor;stroke-width:2.8;stroke-linecap:round;stroke-linejoin:round}
-.theme-toggle-status{position:absolute;right:4px;top:4px;width:20px;height:20px;border-radius:50%;display:grid;place-items:center;background:var(--green);color:#fff;font-size:12px;line-height:1}
-:root[data-theme="dark"]{color-scheme:dark;--green:#75c493;--green-dark:#9bd8ae;--green-soft:#203b2c;--ink:#e7f0e9;--muted:#a6b8ac;--line:#34483b;--card:#18251e;--surface:#101a14;--chat-other:#223229;--input-bg:#111b15;color:var(--ink);background:#0d1510}
-:root[data-theme="dark"] body{background:#0d1510;color:var(--ink)}
-:root[data-theme="dark"] .site-header,:root[data-theme="dark"] .site-footer{background:#101b15;color:var(--ink);border-color:var(--line)}
-:root[data-theme="dark"] .nav-link,:root[data-theme="dark"] .text-button,:root[data-theme="dark"] .nav-login{color:#b7cabe}
-:root[data-theme="dark"] .nav-link:hover,:root[data-theme="dark"] .nav-link.active,:root[data-theme="dark"] .text-button:hover{color:var(--green)}
-:root[data-theme="dark"] .hero-description,:root[data-theme="dark"] .section-intro,:root[data-theme="dark"] .mission-copy,:root[data-theme="dark"] .site-footer p{color:var(--muted)}
-:root[data-theme="dark"] .services-section{background:#142119}
-:root[data-theme="dark"] .service-card,:root[data-theme="dark"] .auth-card,:root[data-theme="dark"] .auth-form input,:root[data-theme="dark"] .auth-form select,:root[data-theme="dark"] .account-type-option{background:#18251e!important;color:var(--ink)!important;border-color:var(--line)!important}
-:root[data-theme="dark"] .service-card h3,:root[data-theme="dark"] .auth-card h2,:root[data-theme="dark"] .account-type-title,:root[data-theme="dark"] .auth-form label{color:var(--ink)!important}
-:root[data-theme="dark"] .service-card p,:root[data-theme="dark"] .account-type-description,:root[data-theme="dark"] .auth-subtitle,:root[data-theme="dark"] .auth-switch{color:var(--muted)!important}
-:root[data-theme="dark"] .mission-symbol,:root[data-theme="dark"] .hero-art::before{background:#203b2c}
-:root[data-theme="dark"] .art-orbit{border-color:#365442}
-:root[data-theme="dark"] .floating-chip{background:#18251e;border-color:var(--line);color:var(--ink)}
-:root[data-theme="dark"] .floating-chip small,:root[data-theme="dark"] .art-card-bottom div span{color:var(--muted)}
-:root[data-theme="dark"] .auth-decoration>p:not(.eyebrow){color:var(--muted)}
-:root[data-theme="dark"] .back-home,:root[data-theme="dark"] .auth-switch button{color:var(--green)}
-@media(max-width:620px){.theme-doll-toggle{right:14px;bottom:14px;width:58px;height:58px;border-radius:19px 19px 19px 7px}.theme-doll-toggle svg{width:31px;height:38px}}
-
-:root[data-theme="dark"] .services-section .service-grid > .service-card,
-:root[data-theme="dark"] .services-section .service-grid > .service-card:nth-child(2){background:#18251e!important;color:var(--ink)!important;border-color:var(--line)!important}
-:root[data-theme="dark"] .services-section .service-grid > .service-card h3{color:var(--ink)!important}
-:root[data-theme="dark"] .services-section .service-grid > .service-card p{color:var(--muted)!important}
-:root[data-theme="dark"] .services-section .service-grid > .service-card .service-link{color:var(--green)!important}
