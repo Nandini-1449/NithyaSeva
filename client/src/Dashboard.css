@@ -20,3 +20,5 @@
 @media(max-width:620px){.job-discovery-actions{align-items:stretch;flex-direction:column}.job-discovery-actions>*{width:100%}.job-discovery-actions label{min-width:0}}
 
 .optional-location{display:grid;gap:5px;justify-items:start}.optional-location p{margin:0}
+
+.job-closed-note{font-size:14px;color:#68796f;line-height:1.5;margin:14px 0}
