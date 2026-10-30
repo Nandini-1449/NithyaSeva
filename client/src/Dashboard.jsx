@@ -305,7 +305,7 @@ function WorkPhotos({ jobId, user, request, mode }) {
   }, [photos]);
 
   return <section className="work-photos">
-    <h4>Work photos</h4><button className="dash-secondary" type="button" onClick={() => setReloadKey(k => k + 1)}>Refresh photos</button>
+    <h4>Work photos</h4>
     {mode === 'worker' && <form className="dash-form" onSubmit={upload}>
       <label>Photo stage<select value={phase} onChange={e => setPhase(e.target.value)}><option value="before">Before work</option><option value="after">After work</option></select></label>
       <label>Choose photo<input type="file" accept="image/jpeg,image/png,image/webp" required onChange={e => setSelected(e.target.files?.[0] || null)} /></label>
