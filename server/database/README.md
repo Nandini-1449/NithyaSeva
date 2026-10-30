@@ -85,7 +85,7 @@ After migration 008, apply the chat migration to the existing database. This cre
 
 Run this from the PostgreSQL prompt:
 
-    \\i 'C:/Users/HP/NithyaSeva/server/database/migrations/009_customer_worker_chat.sql'
+    \i 'C:/Users/HP/NithyaSeva/server/database/migrations/009_customer_worker_chat.sql'
 
 Verify that the table exists:
 
