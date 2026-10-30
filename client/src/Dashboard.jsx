@@ -228,7 +228,7 @@ export default function Dashboard({ user, onLogout }) {
     ? [['trust', 'Dispute management']]
     : user.role === 'customer'
       ? [['workers', 'Find workers'], ['post', 'Post a job'], ['myjobs', 'My jobs'], ['applications', 'Applications'], ['agreements', 'My Agreements'], ['trust', 'Payments & reviews'], ['notifications', 'Notifications']]
-      : [['jobs', 'Find jobs'], ['mywork', 'My work'], ['agreements', 'My Agreements'], ['messages', 'Messages'], ['profile', 'My profile'], ['trust', 'Earnings & trust'], ['notifications', 'Notifications']]
+      : [['jobs', 'Find jobs'], ['mywork', 'My work'], ['agreements', 'My Agreements'], ['profile', 'My profile'], ['trust', 'Earnings & trust'], ['notifications', 'Notifications']]
 
   return <section className="dashboard">
     <div className="dashboard-heading">
