@@ -77,3 +77,18 @@ Migration 008 adds the advance amount and separate customer/worker acceptance ti
 - Apply migrations in version order.
 - Never edit an already-applied migration in a shared/deployed database; add a new numbered migration for later changes.
 - Do not store passwords, JWT secrets, payment credentials, or other secrets in migration files or audit-log details.
+
+
+## Apply the customer-worker chat migration (009)
+
+After migration 008, apply the chat migration to the existing database. This creates only the new `chat_messages` table and indexes; it does not reset or remove users, jobs, assignments, agreements, or payment records.
+
+Run this from the PostgreSQL prompt:
+
+    \\i 'C:/Users/HP/NithyaSeva/server/database/migrations/009_customer_worker_chat.sql'
+
+Verify that the table exists:
+
+    SELECT table_name FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'chat_messages';
+
+Chat access is limited to the customer who posted a job and workers assigned to that job. Messages are stored in the existing PostgreSQL database.
