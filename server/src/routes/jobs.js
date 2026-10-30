@@ -148,7 +148,7 @@ router.get("/agreements/mine", requireAuth, async (req, res) => {
 });
 
 router.post("/:id/workers/:workerId/agreement/propose", requireAuth, async (req, res) => {
-  if (!/^\\d+$/.test(req.params.id) || !/^\\d+$/.test(req.params.workerId)) {
+  if (!/^\d+$/.test(req.params.id) || !/^\d+$/.test(req.params.workerId)) {
     return res.status(400).json({ success: false, message: "Invalid job or worker ID." });
   }
   const agreedPrice = Number(req.body?.agreedPrice);
@@ -231,7 +231,7 @@ router.post("/:id/workers/:workerId/agreement/propose", requireAuth, async (req,
 });
 
 router.post("/:id/workers/:workerId/agreement/accept", requireAuth, async (req, res) => {
-  if (!/^\\d+$/.test(req.params.id) || !/^\\d+$/.test(req.params.workerId)) {
+  if (!/^\d+$/.test(req.params.id) || !/^\d+$/.test(req.params.workerId)) {
     return res.status(400).json({ success: false, message: "Invalid job or worker ID." });
   }
   const client = await pool.connect();
