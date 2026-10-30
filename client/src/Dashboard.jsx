@@ -190,7 +190,7 @@ export default function Dashboard({ user, onLogout }) {
   }
 
   async function accept(jobId, applicationId) {
-    await act(() => request('/jobs/' + jobId + '/applications/' + applicationId + '/accept', { method: 'POST', body: '{}' }), 'Worker selected. The cost proposal is waiting for the worker to accept.')
+    await act(() => request('/jobs/' + jobId + '/applications/' + applicationId + '/accept', { method: 'POST', body: '{}' }), 'Worker selected. Review the shared cost agreement in My Jobs.')
   }
 
   async function changeStatus(jobId, status) {
