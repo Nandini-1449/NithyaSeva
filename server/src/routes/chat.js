@@ -26,7 +26,7 @@ router.get("/conversations", requireAuth, async (req, res) => {
 });
 
 router.get("/jobs/:jobId/workers/:workerId/messages", requireAuth, async (req, res) => {
-  if (!/^\\d+$/.test(req.params.jobId) || !/^\\d+$/.test(req.params.workerId)) {
+  if (!/^\d+$/.test(req.params.jobId) || !/^\d+$/.test(req.params.workerId)) {
     return res.status(400).json({ success: false, message: "Invalid conversation ID." });
   }
   try {
@@ -48,7 +48,7 @@ router.get("/jobs/:jobId/workers/:workerId/messages", requireAuth, async (req, r
 });
 
 router.post("/jobs/:jobId/workers/:workerId/messages", requireAuth, async (req, res) => {
-  if (!/^\\d+$/.test(req.params.jobId) || !/^\\d+$/.test(req.params.workerId)) {
+  if (!/^\d+$/.test(req.params.jobId) || !/^\d+$/.test(req.params.workerId)) {
     return res.status(400).json({ success: false, message: "Invalid conversation ID." });
   }
   const message = typeof req.body?.message === "string" ? req.body.message.trim() : "";
