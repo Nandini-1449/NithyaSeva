@@ -106,6 +106,7 @@ router.post("/jobs/:jobId/razorpay/order", requireAuth, requireRole("customer"),
 
 router.post("/payments/razorpay/verify", requireAuth, requireRole("customer"), async (req,res) => {
   const {razorpay_order_id,razorpay_payment_id,razorpay_signature}=req.body;
+  if(!process.env.RAZORPAY_KEY_SECRET) return res.status(503).json({success:false,message:"Razorpay is not configured."});
   if(typeof razorpay_order_id!=="string"||typeof razorpay_payment_id!=="string"||typeof razorpay_signature!=="string") return res.status(400).json({success:false,message:"Payment verification details are incomplete."});
   const expected=crypto.createHmac("sha256",process.env.RAZORPAY_KEY_SECRET||"").update(razorpay_order_id+"|"+razorpay_payment_id).digest("hex");
   const supplied=Buffer.from(razorpay_signature,"hex"), correct=Buffer.from(expected,"hex");
