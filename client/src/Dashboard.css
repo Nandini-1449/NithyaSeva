@@ -67,3 +67,26 @@
   .dashboard .listing-row,
   .dashboard .assigned-workers-list ul { grid-template-columns: 1fr !important; }
 }
+
+
+/* Keep assigned-worker progress readable inside each job card */
+.dashboard .assigned-workers-list { display:block; width:100%; min-width:0; }
+.dashboard .assigned-workers-list ul {
+  display:grid !important;
+  grid-template-columns:minmax(0,1fr) !important;
+  width:100%;
+  min-width:0;
+  overflow:visible !important;
+  padding:10px 0 4px;
+  margin:0;
+}
+.dashboard .assigned-workers-list li {
+  display:block;
+  box-sizing:border-box;
+  width:100%;
+  min-width:0;
+  max-width:100%;
+  overflow-wrap:anywhere;
+  word-break:normal;
+  line-height:1.5;
+}
