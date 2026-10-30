@@ -2,16 +2,16 @@ import { useCallback, useEffect, useState } from 'react'
 import './Dashboard.css'
 
 const VOICE_LANGUAGES = [
-  ['te-IN', 'Telugu'], ['hi-IN', 'Hindi'], ['ta-IN', 'Tamil'],
-  ['kn-IN', 'Kannada'], ['ml-IN', 'Malayalam'], ['bn-IN', 'Bengali'],
-  ['mr-IN', 'Marathi'], ['en-IN', 'English'],
+  ['te-IN', 'తెలుగు'], ['hi-IN', 'हिन्दी'], ['ta-IN', 'தமிழ்'],
+  ['kn-IN', 'ಕನ್ನಡ'], ['ml-IN', 'മലയാളം'], ['bn-IN', 'বাংলা'],
+  ['mr-IN', 'मराठी'], ['en-IN', 'English'],
 ]
 
 function VoiceAssistant({ language, onLanguageChange, onStart, busy, status, transcript }) {
   return <section className="voice-assistant" aria-label="AI voice assistant">
     <div className="voice-assistant-copy">
       <strong>Fill with your voice</strong>
-      <span>Speak in your language. The form will be filled in that same language.</span>
+      <span>Choose your language and speak naturally. AI translates your speech into English and fills the form.</span>
     </div>
     <div className="voice-assistant-controls">
       <select aria-label="Choose your speaking language" value={language} onChange={e => onLanguageChange(e.target.value)}>
@@ -23,7 +23,7 @@ function VoiceAssistant({ language, onLanguageChange, onStart, busy, status, tra
     </div>
     <p className="voice-assistant-status" role="status">{busy ? 'Listening or translating…' : status || 'Tap the microphone and describe the details.'}</p>
     {transcript && <p className="voice-transcript"><b>Recognised speech:</b> {transcript}</p>}
-    <small>Review the fields in your language before saving. Only the recognised text is sent to the configured AI service.</small>
+    <small>Review the English details filled in for you before saving. Only the recognised text is sent to the configured AI service.</small>
   </section>
 }
 
@@ -253,7 +253,7 @@ export default function Dashboard({ user, onLogout }) {
         return
       }
       setVoiceTranscript(transcript)
-      setVoiceStatus('Understanding your speech and filling form fields…')
+      setVoiceStatus('Translating speech into English and filling form fields…')
       try {
         const data = await request('/voice/translate', {
           method: 'POST',
@@ -277,7 +277,7 @@ export default function Dashboard({ user, onLogout }) {
           }))
         }
         const count = Object.keys(fields).length
-        setVoiceStatus(count ? `Filled ${count} field(s) in your selected language. Please review them.` : 'I could not identify form details. Try describing them more clearly.')
+        setVoiceStatus(count ? `Translated into English and filled ${count} field(s). Please review them.` : 'I could not identify form details. Try describing them more clearly.')
       } catch (e) {
         setVoiceStatus(e.message || 'Translation failed. Please try again.')
       } finally {
