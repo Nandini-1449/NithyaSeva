@@ -23,44 +23,47 @@
 
 .job-closed-note{font-size:14px;color:#68796f;line-height:1.5;margin:14px 0}
 
-/* Amazon-style horizontal shelves across every dashboard section */
+/* Vertical page scrolling with jobs/workers arranged horizontally in wrapping rows */
 .dashboard .dash-grid,
 .dashboard .listing-row,
 .dashboard .assigned-workers-list ul {
-  display: flex !important;
-  flex-direction: row !important;
-  flex-wrap: nowrap !important;
+  display: grid !important;
+  grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+  grid-auto-flow: row;
   align-items: stretch;
   gap: 18px;
   max-width: 100%;
-  overflow-x: auto !important;
-  overflow-y: hidden;
-  padding: 8px 4px 20px;
-  scroll-snap-type: x mandatory;
-  scrollbar-width: thin;
-  -webkit-overflow-scrolling: touch;
+  overflow: visible !important;
+  padding: 8px 0 20px;
+  scroll-snap-type: none;
 }
 .dashboard .dash-grid > .dash-card,
-.dashboard .dash-grid > .listing-card {
+.dashboard .dash-grid > .listing-card,
+.dashboard .listing-row > .dash-card,
+.dashboard .listing-row > .listing-card {
   display: block;
-  flex: 0 0 clamp(270px, 31vw, 350px) !important;
-  width: clamp(270px, 31vw, 350px);
+  width: auto;
   min-width: 0;
-  scroll-snap-align: start;
+  scroll-snap-align: none;
 }
-.dashboard .dash-grid > .dash-empty { flex: 0 0 100%; }
 .dashboard .listing-card { cursor: pointer; transition: transform .18s ease, box-shadow .18s ease, border-color .18s ease; }
 .dashboard .listing-card:hover,
 .dashboard .listing-card:focus-visible { transform: translateY(-3px); border-color: var(--green); box-shadow: 0 12px 28px #17372c16; outline: none; }
 .dashboard .assigned-workers-list ul { list-style: none; padding-left: 0; }
-.dashboard .assigned-workers-list li { flex: 0 0 270px; padding: 14px; border: 1px solid var(--line); border-radius: 10px; background: #fff; }
+.dashboard .assigned-workers-list li { min-width: 0; padding: 14px; border: 1px solid var(--line); border-radius: 10px; background: #fff; }
 .listing-detail-backdrop { z-index: 1100; }
 .listing-detail { position: relative; max-height: min(82vh,760px); overflow-y: auto; width: min(100%,620px); background: #fff; color: var(--ink,#20382d); }
 .listing-detail p { color: #68796f; line-height: 1.7; overflow-wrap: anywhere; }
 .listing-detail p b { color: #294a3b; }
 .listing-detail-close { position: absolute; right: 14px; top: 10px; border: 0; background: transparent; color: var(--muted); font-size: 30px; cursor: pointer; }
 .listing-detail h2 { padding-right: 28px; }
+@media (max-width: 900px) {
+  .dashboard .dash-grid,
+  .dashboard .listing-row,
+  .dashboard .assigned-workers-list ul { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; }
+}
 @media (max-width: 620px) {
-  .dashboard .dash-grid > .dash-card,
-  .dashboard .dash-grid > .listing-card { flex-basis: 84vw !important; width: 84vw; }
+  .dashboard .dash-grid,
+  .dashboard .listing-row,
+  .dashboard .assigned-workers-list ul { grid-template-columns: 1fr !important; }
 }
