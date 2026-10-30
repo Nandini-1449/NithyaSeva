@@ -227,7 +227,7 @@ export default function Dashboard({ user, onLogout }) {
   const tabs = user.role === 'admin'
     ? [['trust', 'Dispute management']]
     : user.role === 'customer'
-      ? [['workers', 'Find workers'], ['post', 'Post a job'], ['myjobs', 'My jobs'], ['applications', 'Applications'], ['agreements', 'My Agreements'], ['messages', 'Messages'], ['trust', 'Payments & reviews'], ['notifications', 'Notifications']]
+      ? [['workers', 'Find workers'], ['post', 'Post a job'], ['myjobs', 'My jobs'], ['applications', 'Applications'], ['agreements', 'My Agreements'], ['trust', 'Payments & reviews'], ['notifications', 'Notifications']]
       : [['jobs', 'Find jobs'], ['mywork', 'My work'], ['agreements', 'My Agreements'], ['messages', 'Messages'], ['profile', 'My profile'], ['trust', 'Earnings & trust'], ['notifications', 'Notifications']]
 
   return <section className="dashboard">
@@ -311,130 +311,12 @@ export default function Dashboard({ user, onLogout }) {
       <article className="dash-card"><h3>{user.role === 'admin' ? 'All disputes' : 'My disputes'}</h3>{phase5.disputes.map(d => <div className="application-row" key={d.id}><b>{d.title} · {d.status}</b><p>{d.reason}: {d.description}</p><p className="dash-muted">Opened by {d.opened_by_name} · Against {d.against_name}</p>{d.resolution && <p><b>Resolution:</b> {d.resolution}</p>}{user.role === 'admin' && <div className="dash-actions"><button type="button" className="dash-secondary" onClick={() => act(() => request('/admin/disputes/' + d.id, {method:'PATCH',body:JSON.stringify({status:'under_review'})}), 'Dispute moved to review.')}>Mark under review</button><button type="button" className="dash-primary" onClick={() => { const note = window.prompt('Enter the resolution note (at least 5 characters):'); if (note && note.trim().length >= 5) act(() => request('/admin/disputes/' + d.id, {method:'PATCH',body:JSON.stringify({status:'resolved',resolution:note.trim()})}), 'Dispute resolved.') }}>Resolve dispute</button></div>}</div>)}{!phase5.disputes.length && <p className="dash-muted">No disputes to display.</p>}</article>
     </div>}
 
-    {section === 'messages' && <ChatCenter request={request} user={user} />}
-
     {section === 'notifications' && <div className="dash-grid">{notifications.map(n => <article className="dash-card" key={n.id}><div className="notification-heading"><h3>{n.title}</h3>{!n.read_at && <span className="status-pill available">New</span>}</div><p>{n.message}</p>{n.related_job_id && <><p><b>Related job:</b> {n.job_title || "Job details"}</p>{user.role === 'customer' && <>{user.role === 'customer' && <>{n.workers_requested != null && <p><b>Workers requested:</b> {n.workers_requested}</p>}{n.workers_assigned != null && <p><b>Workers assigned:</b> {n.workers_assigned}</p>}{n.workers_still_required != null && <p><b>Workers still required:</b> {n.workers_still_required}</p>}</> }</>}<button className="dash-secondary" type="button" onClick={() => setExpandedNotificationId(current => String(current) === String(n.id) ? null : String(n.id))}>{String(expandedNotificationId) === String(n.id) ? 'Hide job details' : 'View job details'}</button>{String(expandedNotificationId) === String(n.id) && <div className="notification-job-details">{n.job_category && <p><b>Category:</b> {n.job_category}</p>}{n.job_location && <p><b>Location:</b> {n.job_location}</p>}{n.job_description && <p><b>Description:</b> {n.job_description}</p>}{n.job_status && <p><b>Job status:</b> {n.job_status.replaceAll('_', ' ')}</p>}</div>}</>}{!n.related_job_id && <p className="dash-muted">No specific job is linked to this notification.</p>}<p className="dash-muted">{new Date(n.created_at).toLocaleString()}</p>{!n.read_at && <button className="dash-secondary" type="button" onClick={() => markRead(n.id)}>Mark as read</button>}</article>)}{!notifications.length && <Empty text="You’re all caught up. Notifications will appear here." />}</div>}
     {selectedDetail && <div className="confirmation-backdrop listing-detail-backdrop" role="presentation" onMouseDown={e => { if (e.target === e.currentTarget) setSelectedDetail(null) }}><section className="confirmation-dialog listing-detail" role="dialog" aria-modal="true" aria-labelledby="listing-detail-title"><button type="button" className="listing-detail-close" onClick={() => setSelectedDetail(null)} aria-label="Close details">×</button>{selectedDetail.type === 'worker' ? <><p className="dash-eyebrow">WORKER PROFILE</p><h2 id="listing-detail-title">{selectedDetail.item.full_name}</h2><p>{selectedDetail.item.bio || 'Skilled local service professional'}</p><p><b>Skills:</b> {(selectedDetail.item.skills || []).join(', ') || 'Not added yet'}</p><p><b>Service area:</b> {selectedDetail.item.service_area || 'Not specified'}</p><p><b>Experience:</b> {selectedDetail.item.experience_years || 0} years</p><p><b>Rate:</b> {money(selectedDetail.item.hourly_rate)}</p><p><b>Availability:</b> {selectedDetail.item.availability_status || 'Unavailable'}</p></> : <><p className="dash-eyebrow">JOB DETAILS</p><h2 id="listing-detail-title">{selectedDetail.item.title}</h2><p>{selectedDetail.item.description}</p><p><b>Category:</b> {selectedDetail.item.category}</p><p><b>Location:</b> {selectedDetail.item.service_location}</p>{selectedDetail.item.distance_km != null && <p><b>Distance:</b> {selectedDetail.item.distance_km} km away</p>}<p><b>Budget:</b> {money(selectedDetail.item.budget)}</p><p><b>Workers needed:</b> {selectedDetail.item.worker_count || 1}</p><p><b>Posted by:</b> {selectedDetail.item.customer_name || 'Customer'}</p><p><b>Posted on:</b> {new Date(selectedDetail.item.created_at).toLocaleDateString()}</p><button type="button" className="dash-primary" onClick={() => { apply(selectedDetail.item.id); setSelectedDetail(null) }}>Apply for this job ↗</button></>}</section></div>}
     {cancelJobTarget && <div className="confirmation-backdrop" role="presentation" onMouseDown={e => { if (e.target === e.currentTarget) setCancelJobTarget(null) }}><section className="confirmation-dialog" role="dialog" aria-modal="true" aria-labelledby="cancel-job-title"><h2 id="cancel-job-title"><span style={{ marginRight: "0.25em" }}>Cancel</span><span style={{ marginRight: "0.25em" }}>this</span><span>job?</span></h2><p>Are you sure you want to cancel this job?</p><div className="confirmation-actions"><button type="button" className="dash-secondary" onClick={() => setCancelJobTarget(null)}>No, keep it</button><button type="button" className="confirmation-danger" disabled={loading} onClick={async () => { const target = cancelJobTarget; await changeStatus(target.id, 'cancelled'); setCancelJobTarget(null) }}>Yes, cancel</button></div></section></div>}
   </section>
 }
 
-
-function ChatCenter({ request, user }) {
-  const [conversations, setConversations] = useState([]);
-  const [selectedKey, setSelectedKey] = useState('');
-  const [messages, setMessages] = useState([]);
-  const [chatLocked, setChatLocked] = useState(false);
-  const [draft, setDraft] = useState('');
-  const [loading, setLoading] = useState(true);
-  const [sending, setSending] = useState(false);
-  const [chatError, setChatError] = useState('');
-
-  useEffect(() => {
-    let active = true;
-    async function loadConversations() {
-      try {
-        const data = await request('/chat/conversations');
-        if (!active) return;
-        const list = data.conversations || [];
-        setConversations(list);
-        setSelectedKey(current => current || (list[0] ? String(list[0].job_id) + ':' + String(list[0].worker_id) : ''));
-        setChatError('');
-      } catch (error) {
-        if (active) setChatError(error.message || 'Could not load conversations.');
-      } finally {
-        if (active) setLoading(false);
-      }
-    }
-    loadConversations();
-    const timer = window.setInterval(loadConversations, 10000);
-    return () => { active = false; window.clearInterval(timer); };
-  }, [request]);
-
-  const selectedConversation = conversations.find(item => String(item.job_id) + ':' + String(item.worker_id) === selectedKey) || null;
-  const paymentCompleted = Boolean(selectedConversation?.chat_locked || chatLocked);
-
-  useEffect(() => {
-    if (!selectedConversation) {
-      setMessages([]);
-      setChatLocked(false);
-      return undefined;
-    }
-    let active = true;
-    setChatLocked(Boolean(selectedConversation.chat_locked));
-    const path = '/chat/jobs/' + selectedConversation.job_id + '/workers/' + selectedConversation.worker_id + '/messages';
-    async function loadMessages() {
-      try {
-        const data = await request(path);
-        if (active) {
-          setMessages(data.messages || []);
-          setChatLocked(Boolean(data.chatLocked || selectedConversation.chat_locked));
-          setChatError('');
-        }
-      } catch (error) {
-        if (active) setChatError(error.message || 'Could not load messages.');
-      }
-    }
-    loadMessages();
-    const timer = window.setInterval(loadMessages, 3500);
-    return () => { active = false; window.clearInterval(timer); };
-  }, [selectedKey, selectedConversation?.job_id, selectedConversation?.worker_id, request]);
-
-  async function sendMessage(event) {
-    event.preventDefault();
-    const message = draft.trim();
-    if (!message || !selectedConversation || sending) return;
-    setSending(true);
-    setChatError('');
-    try {
-      const path = '/chat/jobs/' + selectedConversation.job_id + '/workers/' + selectedConversation.worker_id + '/messages';
-      await request(path, { method: 'POST', body: JSON.stringify({ message }) });
-      setDraft('');
-      const data = await request(path);
-      setMessages(data.messages || []);
-      setChatLocked(Boolean(data.chatLocked || selectedConversation.chat_locked));
-    } catch (error) {
-      setChatError(error.message || 'Could not send your message.');
-    } finally {
-      setSending(false);
-    }
-  }
-
-  return <section className="chat-center">
-    <div className="chat-list">
-      <div className="chat-panel-heading"><h2>Messages</h2><span>{conversations.length} chat{conversations.length === 1 ? '' : 's'}</span></div>
-      {loading && <p className="dash-muted">Loading conversations…</p>}
-      {!loading && conversations.map(conversation => {
-        const key = String(conversation.job_id) + ':' + String(conversation.worker_id);
-        return <button type="button" key={key} className={'chat-conversation ' + (selectedKey === key ? 'selected' : '')} onClick={() => setSelectedKey(key)}>
-          <span className="chat-avatar" aria-hidden="true">{(conversation.other_user_name || '?').slice(0, 1).toUpperCase()}</span>
-          <span className="chat-conversation-copy"><b>{conversation.other_user_name}</b><small>{conversation.job_title}</small><small>{conversation.last_message || 'Start your conversation'}</small></span>
-          {Number(conversation.unread_count) > 0 && <span className="chat-unread">{conversation.unread_count}</span>}
-        </button>;
-      })}
-      {!loading && !conversations.length && <p className="chat-empty">Chat becomes available after a worker is assigned to a customer's job.</p>}
-    </div>
-    <div className="chat-window">
-      {selectedConversation ? <>
-        <div className="chat-window-heading"><div><h3>{selectedConversation.other_user_name}</h3><p>{selectedConversation.job_title}</p></div><span className="chat-private-label">Private job chat</span></div>
-        <div className="chat-message-list" aria-live="polite">
-          {messages.map(item => <div key={item.id} className={'chat-message ' + (String(item.sender_user_id) === String(user.id) ? 'mine' : 'theirs')}>
-            <span>{String(item.sender_user_id) === String(user.id) ? 'You' : item.sender_name}</span>
-            <p>{item.message}</p>
-            <time>{new Date(item.created_at).toLocaleString()}</time>
-          </div>)}
-          {!messages.length && <p className="chat-empty">No messages yet. You can discuss the job here before payment.</p>}
-        </div>
-        {paymentCompleted ? <p className="dash-alert good">Payment has been recorded. This conversation is now read-only; neither participant can send new messages.</p> : <form className="chat-compose" onSubmit={sendMessage}>
-          <textarea value={draft} onChange={event => setDraft(event.target.value)} maxLength={2000} rows="2" placeholder="Write a message…" aria-label="Write a message" />
-          <button className="dash-primary" type="submit" disabled={sending || !draft.trim()}>{sending ? 'Sending…' : 'Send'}</button>
-        </form>}
-        <p className="chat-footnote">Messages refresh automatically. Chat closes for both participants after payment is recorded.</p>
-      </> : <div className="chat-no-selection"><span>✉</span><h3>Your job conversations</h3><p>Select a conversation to read and reply. Only the customer and assigned worker can access it.</p></div>}
-    </div>
-    {chatError && <p className="dash-alert bad chat-error" role="alert">{chatError}</p>}
-  </section>;
-}
 
 function CostAgreement({ agreement, jobId, workerId, userId, money, onPropose, onAccept }) {
   const [total, setTotal] = useState(agreement?.agreed_price ?? '')
