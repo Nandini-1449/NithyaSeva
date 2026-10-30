@@ -12,3 +12,7 @@ CREATE TABLE IF NOT EXISTS job_work_photos (
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 CREATE INDEX IF NOT EXISTS idx_job_work_photos_job_phase ON job_work_photos(job_id, phase, created_at);
+
+
+-- Store image bytes in PostgreSQL so both portals read the same durable photo data.
+ALTER TABLE job_work_photos ADD COLUMN IF NOT EXISTS image_data BYTEA;
