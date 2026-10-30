@@ -323,7 +323,7 @@ function CostAgreement({ agreement, jobId, workerId, userId, money, onPropose, o
   const [advance, setAdvance] = useState(agreement?.advance_amount ?? 0)
   const [terms, setTerms] = useState(agreement?.terms || '')
   const isConfirmed = ['accepted', 'completed'].includes(agreement?.status)
-  const isClosed = ['completed', 'cancelled'].includes(agreement?.status)
+  const isClosed = ['accepted', 'completed', 'cancelled'].includes(agreement?.status)
   const proposedByMe = agreement && String(agreement.proposed_by) === String(userId)
   const balance = Number(total || 0) - Number(advance || 0)
 
