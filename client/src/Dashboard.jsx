@@ -315,7 +315,7 @@ function WorkPhotos({ jobId, user, request, mode }) {
       <h5>{stage === 'before' ? 'Before work' : 'After work'}</h5>
       <div className="dash-grid">{photos.filter(p => p.phase === stage).map(photo => <article className="dash-card" key={photo.id}>
         <p>{photo.worker_name} · {new Date(photo.created_at).toLocaleString()}</p>
-        {photoUrls[photo.id] ? <img src={photoUrls[photo.id]} alt={stage === 'before' ? 'Before-work evidence' : 'After-work evidence'} style={{ width: '100%', maxHeight: '260px', objectFit: 'contain', borderRadius: '10px' }} /> : <p className="dash-muted">Loading photo…</p>}
+        {photoUrls[photo.id] ? <img src={photoUrls[photo.id]} alt={stage === 'before' ? 'Before-work evidence' : 'After-work evidence'} style={{ width: '100%', maxHeight: '260px', objectFit: 'contain', borderRadius: '10px' }} /> : photoUrls[photo.id] === null ? <p className="dash-alert bad">Photo could not be loaded. Check the backend and database migration, then refresh photos.</p> : <p className="dash-muted">Loading photo…</p>}
       </article>)}</div>
       {!photos.some(p => p.phase === stage) && <p className="dash-muted">No {stage}-work photos uploaded yet.</p>}
     </div>)}
