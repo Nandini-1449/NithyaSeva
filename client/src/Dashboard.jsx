@@ -9,6 +9,7 @@ export default function Dashboard({ user, onLogout }) {
   const [jobs, setJobs] = useState([])
   const [mine, setMine] = useState([])
   const [assignments, setAssignments] = useState([])
+  const [agreements, setAgreements] = useState([])
   const [profile, setProfile] = useState({ bio: '', skills: [], experienceYears: 0, serviceArea: '', hourlyRate: '', availabilityStatus: 'available' })
   const [applications, setApplications] = useState({})
   const [notifications, setNotifications] = useState([])
@@ -59,6 +60,7 @@ export default function Dashboard({ user, onLogout }) {
       if (user.role === 'worker') tasks.unshift(request('/jobs?' + jobParams.toString()))
       if (user.role === 'customer') tasks.push(request('/workers'), request('/jobs/mine'))
       if (user.role === 'worker') tasks.push(request('/workers/me'), request('/jobs/assigned/mine'))
+      tasks.push(request('/jobs/agreements/mine'))
       const values = await Promise.all(tasks)
       if (user.role === 'worker') {
         setJobs(values[0].jobs || [])
@@ -66,10 +68,12 @@ export default function Dashboard({ user, onLogout }) {
         setNotifications(values[1].notifications || [])
         setProfile({ bio: p.bio || '', skills: p.skills || [], experienceYears: p.experience_years || 0, serviceArea: p.service_area || '', hourlyRate: p.hourly_rate ?? '', availabilityStatus: p.availability_status || 'available' })
         setAssignments(values[3].assignments || [])
+        setAgreements(values[4].agreements || [])
       } else {
         setNotifications(values[0].notifications || [])
         setWorkers(values[1].workers || [])
         setMine(values[2].jobs || [])
+        setAgreements(values[3].agreements || [])
       }
     } catch (e) { setError(e.message) } finally { setLoading(false) }
   }, [request, user.role, jobLocationMode, currentCoordinates, nearbyRadius])
@@ -193,6 +197,23 @@ export default function Dashboard({ user, onLogout }) {
     await act(() => request('/jobs/' + jobId + '/status', { method: 'PATCH', body: JSON.stringify({ status }) }), 'Job status updated.')
   }
 
+  async function proposeCostAgreement(jobId, workerId, details) {
+    await act(
+      () => request('/jobs/' + jobId + '/workers/' + workerId + '/agreement/propose', {
+        method: 'POST',
+        body: JSON.stringify(details),
+      }),
+      'Cost proposal sent. It will be confirmed after the other party accepts.'
+    )
+  }
+
+  async function acceptCostAgreement(jobId, workerId) {
+    await act(
+      () => request('/jobs/' + jobId + '/workers/' + workerId + '/agreement/accept', { method: 'POST', body: '{}' }),
+      'Your acceptance has been recorded.'
+    )
+  }
+
   async function saveProfile(e) {
     e.preventDefault()
     await act(() => request('/workers/me', { method: 'PUT', body: JSON.stringify({ ...profile, skills: Array.isArray(profile.skills) ? profile.skills : String(profile.skills).split(',').map(s => s.trim()).filter(Boolean), experienceYears: Number(profile.experienceYears), hourlyRate: profile.hourlyRate === '' ? null : Number(profile.hourlyRate) }) }), 'Worker profile saved.')
@@ -206,8 +227,8 @@ export default function Dashboard({ user, onLogout }) {
   const tabs = user.role === 'admin'
     ? [['trust', 'Dispute management']]
     : user.role === 'customer'
-      ? [['workers', 'Find workers'], ['post', 'Post a job'], ['myjobs', 'My jobs'], ['applications', 'Applications'], ['trust', 'Payments & reviews'], ['notifications', 'Notifications']]
-      : [['jobs', 'Find jobs'], ['mywork', 'My work'], ['profile', 'My profile'], ['trust', 'Earnings & trust'], ['notifications', 'Notifications']]
+      ? [['workers', 'Find workers'], ['post', 'Post a job'], ['myjobs', 'My jobs'], ['applications', 'Applications'], ['agreements', 'My Agreements'], ['trust', 'Payments & reviews'], ['notifications', 'Notifications']]
+      : [['jobs', 'Find jobs'], ['mywork', 'My work'], ['agreements', 'My Agreements'], ['profile', 'My profile'], ['trust', 'Earnings & trust'], ['notifications', 'Notifications']]
 
   return <section className="dashboard">
     <div className="dashboard-heading">
@@ -234,8 +255,7 @@ export default function Dashboard({ user, onLogout }) {
       return <article className="dash-card" key={j.id}>
         <span className="status-pill">{j.status.replaceAll('_', ' ')}</span><h3>{j.title}</h3><p>{j.description}</p>
         <p><b>Budget:</b> {money(j.budget)}</p><p><b>Workers requested:</b> {j.worker_count || 1}</p><p><b>Workers assigned:</b> {j.assigned_worker_count ?? 0}</p><p><b>Area:</b> {j.service_location}</p>
-        {workers.length > 0 && <section className="dash-alert"><h4>Payment agreement</h4>{workers.map(w => <div key={'agreement-' + w.worker_id}><p><b>Customer:</b> {user.full_name}</p><p><b>Worker:</b> {w.worker_name}</p><p><b>Agreed amount:</b> {w.agreed_price != null ? money(w.agreed_price) : 'Awaiting agreed price'}</p><p><b>Status:</b> {w.agreed_price != null ? 'Price recorded' : 'Not yet agreed'}</p><p className="dash-muted">This is a shared project record of the agreed price, not a digital signature or proof of payment.</p></div>)}</section>}
-        {workers.length > 0 && <div className="assigned-workers-list"><b>Assigned workers and progress</b><ul>{workers.map(w => <li key={w.worker_id}><b>{w.worker_name}</b> — {w.assignment_status.replaceAll('_', ' ')}{w.worker_completed_at ? ' · Worker confirmed' : ''}{w.customer_completed_at ? ' · Customer confirmed' : ''}{['accepted','in_progress'].includes(w.assignment_status) ? <form className="inline-rate-form" onSubmit={e => { e.preventDefault(); const value = new FormData(e.currentTarget).get('agreedPrice'); act(() => request('/jobs/' + j.id + '/workers/' + w.worker_id + '/rate', { method:'PATCH', body:JSON.stringify({ agreedPrice:Number(value) }) }), 'Agreed rate saved.') }}><label>Agreed price (₹)<input name="agreedPrice" type="number" min="0" step="0.01" defaultValue={w.agreed_price ?? ''} required /></label><button type="submit" className="dash-secondary">Save rate</button></form> : <p><b>Agreed price:</b> {w.agreed_price != null ? money(w.agreed_price) : 'Not set before completion'}</p>}</li>)}</ul></div>}
+        {workers.length > 0 && <div className="assigned-workers-list"><b>Assigned workers and progress</b><ul>{workers.map(w => <li key={w.worker_id}><b>{w.worker_name}</b> — {w.assignment_status.replaceAll('_', ' ')}{w.worker_completed_at ? ' · Worker confirmed' : ''}{w.customer_completed_at ? ' · Customer confirmed' : ''}<CostAgreement key={agreements.find(item => String(item.job_id) === String(j.id) && String(item.worker_id) === String(w.worker_id))?.updated_at || 'new'} agreement={agreements.find(item => String(item.job_id) === String(j.id) && String(item.worker_id) === String(w.worker_id))} jobId={j.id} workerId={w.worker_id} userId={user.id} role={user.role} money={money} onPropose={proposeCostAgreement} onAccept={acceptCostAgreement} /></li>)}</ul></div>}
         <WorkPhotos jobId={j.id} request={request} mode="customer" />
         {!jobIsActive && <p className="job-closed-note">Job is completed and canceled.</p>}
         {jobIsActive && <section className="dash-alert"><b>Job completion and cancellation</b>
@@ -256,10 +276,13 @@ export default function Dashboard({ user, onLogout }) {
 
     {section === 'applications' && user.role === 'customer' && <div className="dash-grid">{Object.entries(applications).map(([jobId, list]) => <article className="dash-card" key={jobId}><h3>{mine.find(job => String(job.id) === String(jobId))?.title || `Job #${jobId}`}</h3>{list.map(a => <div className="application-row" key={a.id}><b>{a.worker_name}</b><p>{a.bio || 'Worker profile'} · {(a.skills || []).join(', ')}</p><p>Offer: {money(a.proposed_price)} · {a.experience_years || 0} years experience</p><p>{a.message || 'No message added.'}</p><span className="status-pill">{a.status}</span>{a.status === 'pending' && <button className="dash-primary" onClick={() => accept(jobId, a.id)}>Accept worker</button>}</div>)}</article>)}{!Object.keys(applications).length && <Empty text="Open “My jobs” and choose “View applications” to review applicants." />}</div>}
 
-    {section === 'mywork' && user.role === 'worker' && <div className="dash-grid">{assignments.filter(a => !['completed', 'cancelled'].includes(a.assignment_status)).map(a => <article className="dash-card" key={a.assignment_id}><span className="status-pill">{a.assignment_status.replaceAll('_', ' ')}</span><h3>{a.title}</h3><p>{a.description}</p><p><b>Customer:</b> {a.customer_name}</p><p><b>Area:</b> {a.service_location}</p><section className="dash-alert"><h4>Payment agreement</h4><p><b>Customer:</b> {a.customer_name}</p><p><b>Worker:</b> {user.full_name}</p><p><b>Agreed amount:</b> {a.agreed_price != null ? money(a.agreed_price) : 'Awaiting customer to record the agreed price'}</p><p><b>Status:</b> {a.agreed_price != null ? 'Price recorded' : 'Not yet agreed'}</p><p className="dash-muted">This is a shared project record of the agreed price, not a digital signature or proof of payment.</p></section>{a.contact_details_shared ? <div className="dash-alert good"><p><b>Exact job address:</b> {a.exact_address}</p><p><b>Customer phone:</b> {a.customer_phone || 'Not provided'}</p></div> : <p className="dash-muted">Exact address and phone appear after the customer approves contact sharing.</p>}<section className="dash-alert"><b>Work progress actions</b><p>{a.worker_completed_at ? 'You have confirmed completion. Waiting for the customer.' : a.assignment_status === 'accepted' ? 'Start the job when you begin work. Upload before and after photos before confirming completion.' : 'Upload before and after photos, then confirm completion.'}</p><div className="dash-actions">{a.assignment_status === 'accepted' && <button type="button" className="dash-primary" onClick={() => changeStatus(a.job_id, 'in_progress')}>Start work</button>}{['accepted', 'in_progress'].includes(a.assignment_status) && <button type="button" className="dash-primary" onClick={() => changeStatus(a.job_id, 'completed')} disabled={Boolean(a.worker_completed_at)}>{a.worker_completed_at ? 'Completion confirmed' : 'Confirm completion'}</button>}{a.job_status === 'in_progress' && <button type="button" className="dash-secondary" onClick={() => changeStatus(a.job_id, 'cancelled')} disabled={Boolean(a.cancellation_requested_at && String(a.cancellation_requested_by) === String(user.id))}>{!a.cancellation_requested_at ? 'Request cancellation' : String(a.cancellation_requested_by) === String(user.id) ? 'Waiting for customer acknowledgement' : 'Acknowledge cancellation'}</button>}</div></section><WorkPhotos jobId={a.job_id} request={request} mode="worker" /></article>)}{!assignments.filter(a => !['completed', 'cancelled'].includes(a.assignment_status)).length && <Empty text="You have no active assignments. Apply to an open job to get started." />}</div>}
+    {section === 'mywork' && user.role === 'worker' && <div className="dash-grid">{assignments.filter(a => !['completed', 'cancelled'].includes(a.assignment_status)).map(a => <article className="dash-card" key={a.assignment_id}><span className="status-pill">{a.assignment_status.replaceAll('_', ' ')}</span><h3>{a.title}</h3><p>{a.description}</p><p><b>Customer:</b> {a.customer_name}</p><p><b>Area:</b> {a.service_location}</p><CostAgreement key={agreements.find(item => String(item.job_id) === String(a.job_id) && String(item.worker_id) === String(user.id))?.updated_at || 'new'} agreement={agreements.find(item => String(item.job_id) === String(a.job_id) && String(item.worker_id) === String(user.id))} jobId={a.job_id} workerId={user.id} userId={user.id} role={user.role} money={money} onPropose={proposeCostAgreement} onAccept={acceptCostAgreement} />{a.contact_details_shared ? <div className="dash-alert good"><p><b>Exact job address:</b> {a.exact_address}</p><p><b>Customer phone:</b> {a.customer_phone || 'Not provided'}</p></div> : <p className="dash-muted">Exact address and phone appear after the customer approves contact sharing.</p>}<section className="dash-alert"><b>Work progress actions</b><p>{a.worker_completed_at ? 'You have confirmed completion. Waiting for the customer.' : a.assignment_status === 'accepted' ? 'Start the job when you begin work. Upload before and after photos before confirming completion.' : 'Upload before and after photos, then confirm completion.'}</p><div className="dash-actions">{a.assignment_status === 'accepted' && <button type="button" className="dash-primary" onClick={() => changeStatus(a.job_id, 'in_progress')}>Start work</button>}{['accepted', 'in_progress'].includes(a.assignment_status) && <button type="button" className="dash-primary" onClick={() => changeStatus(a.job_id, 'completed')} disabled={Boolean(a.worker_completed_at)}>{a.worker_completed_at ? 'Completion confirmed' : 'Confirm completion'}</button>}{a.job_status === 'in_progress' && <button type="button" className="dash-secondary" onClick={() => changeStatus(a.job_id, 'cancelled')} disabled={Boolean(a.cancellation_requested_at && String(a.cancellation_requested_by) === String(user.id))}>{!a.cancellation_requested_at ? 'Request cancellation' : String(a.cancellation_requested_by) === String(user.id) ? 'Waiting for customer acknowledgement' : 'Acknowledge cancellation'}</button>}</div></section><WorkPhotos jobId={a.job_id} request={request} mode="worker" /></article>)}{!assignments.filter(a => !['completed', 'cancelled'].includes(a.assignment_status)).length && <Empty text="You have no active assignments. Apply to an open job to get started." />}</div>}
 
     {section === 'profile' && user.role === 'worker' && <form className="dash-form" onSubmit={saveProfile}><h2>Your worker profile</h2><p>A complete profile helps customers understand your experience and service area.</p><label>About you<textarea rows="4" maxLength="4000" spellCheck="true" value={profile.bio} onChange={e => setProfile({ ...profile, bio: capitalizeText(e.target.value) })} onBlur={e => e.target.value && setProfile(p => ({ ...p, bio: capitalizeText(e.target.value) }))} /></label><label>Skills (comma-separated)<input spellCheck="true" value={Array.isArray(profile.skills) ? profile.skills.join(', ') : profile.skills} onChange={e => setProfile({ ...profile, skills: capitalizeText(e.target.value) })} onBlur={e => e.target.value && setProfile(p => ({ ...p, skills: capitalizeText(e.target.value) }))} placeholder="Plumbing, cleaning, electrical work" /></label><label>Years of experience<input type="number" min="0" max="60" value={profile.experienceYears} onChange={e => setProfile({ ...profile, experienceYears: e.target.value })} /></label><label>Service area<input maxLength="160" spellCheck="true" value={profile.serviceArea} onChange={e => setProfile({ ...profile, serviceArea: capitalizeText(e.target.value) })} onBlur={e => e.target.value && setProfile(p => ({ ...p, serviceArea: capitalizeText(e.target.value) }))} placeholder="Your locality or service area" /></label><label>Hourly rate in INR<input type="number" min="0" step="0.01" value={profile.hourlyRate} onChange={e => setProfile({ ...profile, hourlyRate: e.target.value })} /></label><label>Availability<select value={profile.availabilityStatus} onChange={e => setProfile({ ...profile, availabilityStatus: e.target.value })}><option value="available">Available for jobs</option><option value="busy">Busy</option><option value="unavailable">Unavailable</option></select></label><button className="dash-primary" type="submit" disabled={loading}>{loading ? 'Saving...' : 'Save profile'}</button></form>}
 
+
+
+    {section === 'agreements' && <div className="dash-grid">{agreements.map(agreement => <article className="dash-card" key={agreement.id}><p className="dash-eyebrow">SHARED COST AGREEMENT</p><h3>{agreement.job_title}</h3><p><b>Customer:</b> {agreement.customer_name}</p><p><b>Worker:</b> {agreement.worker_name}</p><CostAgreement key={agreement.updated_at} agreement={agreement} jobId={agreement.job_id} workerId={agreement.worker_id} userId={user.id} role={user.role} money={money} onPropose={proposeCostAgreement} onAccept={acceptCostAgreement} /></article>)}{!agreements.length && <Empty text="Your cost agreements will appear here after a worker is selected for a job." />}</div>}
 
     {section === 'trust' && <div className="dash-grid">
       <article className="dash-card"><h2>{user.role === 'worker' ? 'Worker earnings ledger' : 'Payment records'}</h2>
@@ -291,6 +314,40 @@ export default function Dashboard({ user, onLogout }) {
     {section === 'notifications' && <div className="dash-grid">{notifications.map(n => <article className="dash-card" key={n.id}><div className="notification-heading"><h3>{n.title}</h3>{!n.read_at && <span className="status-pill available">New</span>}</div><p>{n.message}</p>{n.related_job_id && <><p><b>Related job:</b> {n.job_title || "Job details"}</p>{user.role === 'customer' && <>{user.role === 'customer' && <>{n.workers_requested != null && <p><b>Workers requested:</b> {n.workers_requested}</p>}{n.workers_assigned != null && <p><b>Workers assigned:</b> {n.workers_assigned}</p>}{n.workers_still_required != null && <p><b>Workers still required:</b> {n.workers_still_required}</p>}</> }</>}<button className="dash-secondary" type="button" onClick={() => setExpandedNotificationId(current => String(current) === String(n.id) ? null : String(n.id))}>{String(expandedNotificationId) === String(n.id) ? 'Hide job details' : 'View job details'}</button>{String(expandedNotificationId) === String(n.id) && <div className="notification-job-details">{n.job_category && <p><b>Category:</b> {n.job_category}</p>}{n.job_location && <p><b>Location:</b> {n.job_location}</p>}{n.job_description && <p><b>Description:</b> {n.job_description}</p>}{n.job_status && <p><b>Job status:</b> {n.job_status.replaceAll('_', ' ')}</p>}</div>}</>}{!n.related_job_id && <p className="dash-muted">No specific job is linked to this notification.</p>}<p className="dash-muted">{new Date(n.created_at).toLocaleString()}</p>{!n.read_at && <button className="dash-secondary" type="button" onClick={() => markRead(n.id)}>Mark as read</button>}</article>)}{!notifications.length && <Empty text="You’re all caught up. Notifications will appear here." />}</div>}
     {selectedDetail && <div className="confirmation-backdrop listing-detail-backdrop" role="presentation" onMouseDown={e => { if (e.target === e.currentTarget) setSelectedDetail(null) }}><section className="confirmation-dialog listing-detail" role="dialog" aria-modal="true" aria-labelledby="listing-detail-title"><button type="button" className="listing-detail-close" onClick={() => setSelectedDetail(null)} aria-label="Close details">×</button>{selectedDetail.type === 'worker' ? <><p className="dash-eyebrow">WORKER PROFILE</p><h2 id="listing-detail-title">{selectedDetail.item.full_name}</h2><p>{selectedDetail.item.bio || 'Skilled local service professional'}</p><p><b>Skills:</b> {(selectedDetail.item.skills || []).join(', ') || 'Not added yet'}</p><p><b>Service area:</b> {selectedDetail.item.service_area || 'Not specified'}</p><p><b>Experience:</b> {selectedDetail.item.experience_years || 0} years</p><p><b>Rate:</b> {money(selectedDetail.item.hourly_rate)}</p><p><b>Availability:</b> {selectedDetail.item.availability_status || 'Unavailable'}</p></> : <><p className="dash-eyebrow">JOB DETAILS</p><h2 id="listing-detail-title">{selectedDetail.item.title}</h2><p>{selectedDetail.item.description}</p><p><b>Category:</b> {selectedDetail.item.category}</p><p><b>Location:</b> {selectedDetail.item.service_location}</p>{selectedDetail.item.distance_km != null && <p><b>Distance:</b> {selectedDetail.item.distance_km} km away</p>}<p><b>Budget:</b> {money(selectedDetail.item.budget)}</p><p><b>Workers needed:</b> {selectedDetail.item.worker_count || 1}</p><p><b>Posted by:</b> {selectedDetail.item.customer_name || 'Customer'}</p><p><b>Posted on:</b> {new Date(selectedDetail.item.created_at).toLocaleDateString()}</p><button type="button" className="dash-primary" onClick={() => { apply(selectedDetail.item.id); setSelectedDetail(null) }}>Apply for this job ↗</button></>}</section></div>}
     {cancelJobTarget && <div className="confirmation-backdrop" role="presentation" onMouseDown={e => { if (e.target === e.currentTarget) setCancelJobTarget(null) }}><section className="confirmation-dialog" role="dialog" aria-modal="true" aria-labelledby="cancel-job-title"><h2 id="cancel-job-title"><span style={{ marginRight: "0.25em" }}>Cancel</span><span style={{ marginRight: "0.25em" }}>this</span><span>job?</span></h2><p>Are you sure you want to cancel this job?</p><div className="confirmation-actions"><button type="button" className="dash-secondary" onClick={() => setCancelJobTarget(null)}>No, keep it</button><button type="button" className="confirmation-danger" disabled={loading} onClick={async () => { const target = cancelJobTarget; await changeStatus(target.id, 'cancelled'); setCancelJobTarget(null) }}>Yes, cancel</button></div></section></div>}
+  </section>
+}
+
+
+function CostAgreement({ agreement, jobId, workerId, userId, role, money, onPropose, onAccept }) {
+  const [total, setTotal] = useState(agreement?.agreed_price ?? '')
+  const [advance, setAdvance] = useState(agreement?.advance_amount ?? 0)
+  const [terms, setTerms] = useState(agreement?.terms || '')
+  const isConfirmed = ['accepted', 'completed'].includes(agreement?.status)
+  const isClosed = ['completed', 'cancelled'].includes(agreement?.status)
+  const proposedByMe = agreement && String(agreement.proposed_by) === String(userId)
+  const otherAccepted = agreement && (role === 'customer' ? Boolean(agreement.worker_accepted_at) : Boolean(agreement.customer_accepted_at))
+  const balance = Number(total || 0) - Number(advance || 0)
+
+  return <section className="cost-agreement">
+    <div className="cost-agreement-heading"><h4>Cost Agreement</h4><span className={'status-pill ' + (isConfirmed ? 'available' : '')}>{isConfirmed ? 'Confirmed by both' : agreement?.status === 'proposed' ? 'Awaiting acceptance' : 'Not proposed'}</span></div>
+    {agreement && <>
+      <p><b>Total cost:</b> {money(agreement.agreed_price)}</p>
+      <p><b>Advance:</b> {money(agreement.advance_amount || 0)} · <b>Balance:</b> {money(Number(agreement.agreed_price) - Number(agreement.advance_amount || 0))}</p>
+      {agreement.terms && <p><b>Terms:</b> {agreement.terms}</p>}
+      <p><b>Customer:</b> {agreement.customer_accepted_at ? 'Accepted' : 'Waiting'} · <b>Worker:</b> {agreement.worker_accepted_at ? 'Accepted' : 'Waiting'}</p>
+      {isConfirmed && <p className="agreement-confirmed-note">Both parties have accepted this cost agreement.</p>}
+      {!isConfirmed && proposedByMe && <p className="dash-muted">Your proposal is saved. Waiting for the other party to accept or counter-propose.</p>}
+    </>}
+    {!isClosed && <form className="agreement-form" onSubmit={e => { e.preventDefault(); onPropose(jobId, workerId, { agreedPrice: Number(total), advanceAmount: Number(advance || 0), terms }) }}>
+      <label>Total agreed cost (₹)<input required type="number" min="0" step="0.01" value={total} onChange={e => setTotal(e.target.value)} /></label>
+      <label>Advance amount (₹)<input required type="number" min="0" step="0.01" max={total === '' ? undefined : total} value={advance} onChange={e => setAdvance(e.target.value)} /></label>
+      <label>Remaining balance (₹)<input readOnly value={Number.isFinite(balance) && balance >= 0 ? balance.toFixed(2) : 'Check total and advance'} /></label>
+      <label>Terms / work conditions (optional)<textarea rows="2" maxLength="3000" value={terms} onChange={e => setTerms(e.target.value)} placeholder="Mention materials, timing, or other agreed conditions" /></label>
+      <button className="dash-primary" type="submit">{agreement ? 'Send counter-proposal' : 'Propose cost'}</button>
+    </form>}
+    {agreement?.status === 'proposed' && !proposedByMe && <div className="dash-actions"><button type="button" className="dash-primary" onClick={() => onAccept(jobId, workerId)}>Accept this agreement</button></div>}
+    {isClosed && <p className="dash-muted">This agreement is closed and can no longer be changed.</p>}
+    <p className="dash-muted">This is a shared project record, not a digital signature or proof of payment.</p>
   </section>
 }
 
