@@ -202,8 +202,8 @@ export default function Dashboard({ user, onLogout }) {
         <p><b>Budget:</b> {money(j.budget)}</p><p><b>Workers requested:</b> {j.worker_count || 1}</p><p><b>Workers assigned:</b> {j.assigned_worker_count ?? 0}</p><p><b>Area:</b> {j.service_location}</p>
         {workers.length > 0 && <div className="assigned-workers-list"><b>Assigned workers and progress</b><ul>{workers.map(w => <li key={w.worker_id}>{w.worker_name} — {w.assignment_status.replaceAll('_', ' ')}{w.worker_completed_at ? ' · Worker confirmed' : ''}{w.customer_completed_at ? ' · Customer confirmed' : ''}</li>)}</ul></div>}
         <WorkPhotos jobId={j.id} user={user} request={request} mode="customer" />
-        <section className="dash-alert"><b>Job completion and cancellation</b>
-          {!jobIsActive && <p className="job-closed-note">Job is completed and canceled.</p>}
+        {!jobIsActive && <p className="job-closed-note">Job is completed and canceled.</p>}
+        {jobIsActive && <section className="dash-alert"><b>Job completion and cancellation</b>
           {pendingWorkerCompletion && <p>A worker has confirmed completion. Review the before/after photos and confirm the work.</p>}
           {pendingCancellation && <p>A worker requested cancellation. Acknowledge it below to release that worker.</p>}
           {ownCancellation && <p>Your cancellation request is waiting for the worker's acknowledgement.</p>}
@@ -213,7 +213,7 @@ export default function Dashboard({ user, onLogout }) {
             {pendingCancellation && <button type="button" className="dash-secondary" onClick={() => changeStatus(j.id, 'cancelled')}>Acknowledge cancellation</button>}
             {jobIsActive && j.status === 'in_progress' && !pendingCancellation && !ownCancellation && <button type="button" className="dash-secondary" onClick={() => changeStatus(j.id, 'cancelled')}>Request cancellation</button>}
           </div>
-        </section>
+        </section>}
         {jobIsActive && (j.assigned_worker_count ?? 0) >= (j.worker_count || 1) ? <div className="dash-alert good"><p>Required team is complete. {j.contact_sharing_approved_at ? 'Contact details are shared.' : 'Approve sharing so assigned workers can see your exact address and phone number.'}</p><button type="button" className={j.contact_sharing_approved_at ? 'dash-secondary' : 'dash-primary'} onClick={() => act(() => request('/jobs/' + j.id + '/share-contact', { method: 'PATCH', body: JSON.stringify({ approved: !j.contact_sharing_approved_at }) }), j.contact_sharing_approved_at ? 'Contact sharing revoked.' : 'Contact details shared with assigned workers.')}>{j.contact_sharing_approved_at ? 'Revoke contact sharing' : 'Approve sharing contact and location'}</button></div> : null}
         {jobIsActive && <div className="dash-actions">{j.status === 'open' && <button type="button" className="dash-primary" onClick={() => showApplications(j.id)}>View applications</button>}{['open', 'assigned', 'accepted'].includes(j.status) && <button type="button" className="dash-secondary" onClick={() => setCancelJobTarget({ id: j.id, title: j.title })}>Cancel job</button>}</div>}
       </article>
