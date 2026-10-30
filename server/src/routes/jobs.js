@@ -506,10 +506,20 @@ router.post("/:id/applications/:applicationId/accept", requireAuth, requireRole(
       "INSERT INTO job_assignments (job_id, worker_id, agreed_price, status) VALUES ($1,$2,NULL,'accepted')",
       [job.id, application.worker_id]
     );
+    const workerProposedPrice = application.proposed_price !== null;
+    const initialAgreementStatus = workerProposedPrice ? "accepted" : "proposed";
+    const initialProposedBy = workerProposedPrice ? application.worker_id : job.customer_id;
+    const initialAcceptanceTime = workerProposedPrice ? new Date() : null;
     await client.query(
-      "INSERT INTO job_agreements (job_id, customer_id, worker_id, agreed_price, advance_amount, scope_of_work, status, proposed_by, customer_accepted_at) VALUES ($1,$2,$3,$4,0,$5,'proposed',$2,NOW())",
-      [job.id, job.customer_id, application.worker_id, agreedPrice, job.description]
+      "INSERT INTO job_agreements (job_id, customer_id, worker_id, agreed_price, advance_amount, scope_of_work, status, proposed_by, customer_accepted_at, worker_accepted_at, accepted_at) VALUES ($1,$2,$3,$4,0,$5,$6,$7,NOW(),$8,$9)",
+      [job.id, job.customer_id, application.worker_id, agreedPrice, job.description, initialAgreementStatus, initialProposedBy, initialAcceptanceTime, initialAcceptanceTime]
     );
+    if (workerProposedPrice) {
+      await client.query(
+        "UPDATE job_assignments SET agreed_price = $3 WHERE job_id = $1 AND worker_id = $2",
+        [job.id, application.worker_id, agreedPrice]
+      );
+    }
     await client.query(
       "UPDATE job_applications SET status = 'accepted', reviewed_at = NOW(), updated_at = NOW() WHERE id = $1",
       [application.id]
