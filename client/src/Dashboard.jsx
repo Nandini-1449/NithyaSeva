@@ -23,7 +23,7 @@ function VoiceAssistant({ language, onLanguageChange, onStart, busy, status, tra
     </div>
     <p className="voice-assistant-status" role="status">{busy ? 'Listening or translating…' : status || 'Tap the microphone and describe the details.'}</p>
     {transcript && <p className="voice-transcript"><b>Recognised speech:</b> {transcript}</p>}
-    <small>Check the translated fields before saving. Speech is sent to the configured AI service for translation.</small>
+    <small>Check the translated fields before saving. The recognised text is sent to the configured AI service for translation.</small>
   </section>
 }
 
