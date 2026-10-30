@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import './App.css'
 import professionalWorkers from './assets/professional-workers.svg'
 import Dashboard from './Dashboard'
@@ -41,6 +41,14 @@ function App() {
   const [notice, setNotice] = useState('')
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
+  const [theme, setTheme] = useState(() => {
+    try { return localStorage.getItem('nithyaseva_theme') === 'dark' ? 'dark' : 'light' } catch { return 'light' }
+  })
+  useEffect(() => {
+    document.documentElement.setAttribute('data-theme', theme)
+    try { localStorage.setItem('nithyaseva_theme', theme) } catch { /* Theme still applies for this session. */ }
+  }, [theme])
+
   const [signedInUser, setSignedInUser] = useState(() => {
     try {
       const saved = localStorage.getItem('nithyaseva_user')
@@ -268,6 +276,19 @@ function App() {
         <p>Every skill has value. Every worker deserves opportunity.</p>
         <span className="footer-copy">© {new Date().getFullYear()} NithyaSeva</span>
       </footer>
+      <button
+        type="button"
+        className="theme-doll-toggle"
+        onClick={() => setTheme(current => current === 'light' ? 'dark' : 'light')}
+        aria-label={theme === 'light' ? 'Switch to dark theme' : 'Switch to light theme'}
+        title={theme === 'light' ? 'Switch to dark theme' : 'Switch to light theme'}
+      >
+        <svg viewBox="0 0 48 52" role="img" aria-hidden="true">
+          <circle cx="24" cy="8" r="5.5" />
+          <path d="M24 15v17M7 21h34M24 32 13 47M24 32l11 15" />
+        </svg>
+        <span className="theme-toggle-status" aria-hidden="true">{theme === 'light' ? '☾' : '☀'}</span>
+      </button>
     </main>
   )
 }
