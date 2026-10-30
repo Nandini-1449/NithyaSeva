@@ -239,10 +239,13 @@ export default function Dashboard({ user, onLogout }) {
     recognition.continuous = false
     recognition.interimResults = false
     recognition.maxAlternatives = 1
+    let hasResult = false
+    let hasError = false
     setVoiceBusy(true)
     setVoiceStatus('Listening… speak clearly in your selected language.')
     setVoiceTranscript('')
     recognition.onresult = async event => {
+      hasResult = true
       const transcript = event.results?.[0]?.[0]?.transcript?.trim()
       if (!transcript) {
         setVoiceStatus('No speech was recognised. Please try again.')
@@ -282,6 +285,7 @@ export default function Dashboard({ user, onLogout }) {
       }
     }
     recognition.onerror = event => {
+      hasError = true
       setVoiceStatus(event.error === 'not-allowed'
         ? 'Microphone permission was blocked. Allow microphone access in your browser settings.'
         : event.error === 'no-speech'
@@ -290,7 +294,10 @@ export default function Dashboard({ user, onLogout }) {
       setVoiceBusy(false)
     }
     recognition.onend = () => {
-      // The result handler manages the busy state while translation is in progress.
+      if (!hasResult && !hasError) {
+        setVoiceStatus('No speech was detected. Tap the mic and try again.')
+        setVoiceBusy(false)
+      }
     }
     try {
       recognition.start()
