@@ -132,9 +132,9 @@ router.get("/assigned/mine", requireAuth, requireRole("worker"), async (req, res
               j.id AS job_id, j.title, j.description, j.category, j.service_location,
               j.budget, j.scheduled_for, j.status AS job_status, j.worker_count,
               u.full_name AS customer_name,
-              CASE WHEN j.contact_sharing_approved_at IS NOT NULL AND (SELECT COUNT(*) FROM job_assignments team WHERE team.job_id = j.id AND team.status <> 'cancelled') >= j.worker_count THEN j.exact_address ELSE NULL END AS exact_address,
-              CASE WHEN j.contact_sharing_approved_at IS NOT NULL AND (SELECT COUNT(*) FROM job_assignments team WHERE team.job_id = j.id AND team.status <> 'cancelled') >= j.worker_count THEN u.phone ELSE NULL END AS customer_phone,
-              (j.contact_sharing_approved_at IS NOT NULL AND (SELECT COUNT(*) FROM job_assignments team WHERE team.job_id = j.id AND team.status <> 'cancelled') >= j.worker_count) AS contact_details_shared
+              CASE WHEN j.status NOT IN ('completed', 'cancelled') AND j.contact_sharing_approved_at IS NOT NULL AND (SELECT COUNT(*) FROM job_assignments team WHERE team.job_id = j.id AND team.status <> 'cancelled') >= j.worker_count THEN j.exact_address ELSE NULL END AS exact_address,
+              CASE WHEN j.status NOT IN ('completed', 'cancelled') AND j.contact_sharing_approved_at IS NOT NULL AND (SELECT COUNT(*) FROM job_assignments team WHERE team.job_id = j.id AND team.status <> 'cancelled') >= j.worker_count THEN u.phone ELSE NULL END AS customer_phone,
+              (j.status NOT IN ('completed', 'cancelled') AND j.contact_sharing_approved_at IS NOT NULL AND (SELECT COUNT(*) FROM job_assignments team WHERE team.job_id = j.id AND team.status <> 'cancelled') >= j.worker_count) AS contact_details_shared
        FROM job_assignments a
        JOIN jobs j ON j.id = a.job_id
        JOIN users u ON u.id = j.customer_id
@@ -217,6 +217,10 @@ router.patch("/:id/share-contact", requireAuth, requireRole("customer"), async (
       return res.status(404).json({ success: false, message: "Job not found for this customer." });
     }
     const countResult = await client.query("SELECT COUNT(*)::int AS total FROM job_assignments WHERE job_id = $1 AND status <> 'cancelled'", [job.id]);
+    if (approved && (job.status === "completed" || job.status === "cancelled")) {
+      await client.query("ROLLBACK");
+      return res.status(409).json({ success: false, message: "Contact sharing cannot be enabled for a completed or cancelled job." });
+    }
     if (approved && countResult.rows[0].total < job.worker_count) {
       await client.query("ROLLBACK");
       return res.status(409).json({ success: false, message: "The requested worker team must be complete before sharing contact details." });
@@ -463,7 +467,7 @@ router.patch("/:id/status", requireAuth, async (req, res) => {
         [job.id]
       );
       const allDone = totals.rows[0].active_total > 0 && totals.rows[0].active_total === totals.rows[0].completed_total;
-      if (allDone) await client.query("UPDATE jobs SET status = 'completed', updated_at = NOW() WHERE id = $1", [job.id]);
+      if (allDone) await client.query("UPDATE jobs SET status = 'completed', contact_sharing_approved_at = NULL, contact_sharing_approved_by = NULL, updated_at = NOW() WHERE id = $1", [job.id]);
       await client.query("COMMIT");
       return res.json({ success: true, message: "Completion confirmation saved. A worker becomes available only after both parties confirm.", jobId: job.id, status: allDone ? "completed" : "in_progress" });
     }
