@@ -122,6 +122,179 @@ router.get("/mine", requireAuth, requireRole("customer"), async (req, res) => {
   }
 });
 
+
+// Shared cost-agreement records for the customer and each assigned worker.
+router.get("/agreements/mine", requireAuth, async (req, res) => {
+  try {
+    const result = await pool.query(
+      `SELECT ag.id, ag.job_id, ag.customer_id, ag.worker_id, ag.agreed_price,
+              ag.advance_amount, ag.scope_of_work, ag.terms, ag.status, ag.proposed_by,
+              ag.customer_accepted_at, ag.worker_accepted_at, ag.accepted_at,
+              ag.created_at, ag.updated_at, j.title AS job_title,
+              cu.full_name AS customer_name, wu.full_name AS worker_name
+       FROM job_agreements ag
+       JOIN jobs j ON j.id = ag.job_id
+       JOIN users cu ON cu.id = ag.customer_id
+       JOIN users wu ON wu.id = ag.worker_id
+       WHERE ag.customer_id = $1 OR ag.worker_id = $1
+       ORDER BY ag.updated_at DESC`,
+      [req.user.id]
+    );
+    res.json({ success: true, agreements: result.rows });
+  } catch (error) {
+    console.error("Agreement listing error:", error.message);
+    res.status(500).json({ success: false, message: "Could not load cost agreements." });
+  }
+});
+
+router.post("/:id/workers/:workerId/agreement/propose", requireAuth, async (req, res) => {
+  if (!/^\\d+$/.test(req.params.id) || !/^\\d+$/.test(req.params.workerId)) {
+    return res.status(400).json({ success: false, message: "Invalid job or worker ID." });
+  }
+  const agreedPrice = Number(req.body?.agreedPrice);
+  const advanceAmount = req.body?.advanceAmount === undefined || req.body?.advanceAmount === "" ? 0 : Number(req.body.advanceAmount);
+  const terms = typeof req.body?.terms === "string" ? req.body.terms.trim() : "";
+  if (!Number.isFinite(agreedPrice) || agreedPrice < 0 || agreedPrice > 100000000) {
+    return res.status(400).json({ success: false, message: "Enter a valid total cost." });
+  }
+  if (!Number.isFinite(advanceAmount) || advanceAmount < 0 || advanceAmount > agreedPrice) {
+    return res.status(400).json({ success: false, message: "Advance must be between zero and the total cost." });
+  }
+  if (terms.length > 3000) return res.status(400).json({ success: false, message: "Terms must be at most 3,000 characters." });
+
+  const client = await pool.connect();
+  try {
+    await client.query("BEGIN");
+    const jobResult = await client.query("SELECT id, customer_id, title, description, status FROM jobs WHERE id = $1 FOR UPDATE", [req.params.id]);
+    const job = jobResult.rows[0];
+    if (!job) {
+      await client.query("ROLLBACK");
+      return res.status(404).json({ success: false, message: "Job not found." });
+    }
+    const isCustomer = String(job.customer_id) === String(req.user.id);
+    const isWorker = String(req.params.workerId) === String(req.user.id);
+    if (!isCustomer && !isWorker) {
+      await client.query("ROLLBACK");
+      return res.status(403).json({ success: false, message: "Only this job's customer or assigned worker can propose the cost." });
+    }
+    const assignment = await client.query(
+      "SELECT id FROM job_assignments WHERE job_id = $1 AND worker_id = $2 AND status IN ('accepted','in_progress') FOR UPDATE",
+      [job.id, req.params.workerId]
+    );
+    if (!assignment.rowCount) {
+      await client.query("ROLLBACK");
+      return res.status(404).json({ success: false, message: "Active worker assignment not found." });
+    }
+    const existing = await client.query(
+      "SELECT id, status FROM job_agreements WHERE job_id = $1 AND worker_id = $2 FOR UPDATE",
+      [job.id, req.params.workerId]
+    );
+    if (existing.rowCount && ["accepted", "completed", "cancelled"].includes(existing.rows[0].status)) {
+      await client.query("ROLLBACK");
+      return res.status(409).json({ success: false, message: "This agreement is already confirmed or closed and cannot be changed." });
+    }
+    const proposerAcceptedAt = new Date();
+    const customerAcceptedAt = isCustomer ? proposerAcceptedAt : null;
+    const workerAcceptedAt = isWorker ? proposerAcceptedAt : null;
+    const saved = await client.query(
+      `INSERT INTO job_agreements
+         (job_id, customer_id, worker_id, agreed_price, advance_amount, scope_of_work, terms,
+          status, proposed_by, customer_accepted_at, worker_accepted_at, accepted_at)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,'proposed',$8,$9,$10,NULL)
+       ON CONFLICT (job_id, worker_id) DO UPDATE SET
+         agreed_price = EXCLUDED.agreed_price,
+         advance_amount = EXCLUDED.advance_amount,
+         scope_of_work = EXCLUDED.scope_of_work,
+         terms = EXCLUDED.terms,
+         status = 'proposed',
+         proposed_by = EXCLUDED.proposed_by,
+         customer_accepted_at = EXCLUDED.customer_accepted_at,
+         worker_accepted_at = EXCLUDED.worker_accepted_at,
+         accepted_at = NULL,
+         updated_at = NOW()
+       RETURNING *`,
+      [job.id, job.customer_id, req.params.workerId, agreedPrice, advanceAmount, job.description, terms || null, req.user.id, customerAcceptedAt, workerAcceptedAt]
+    );
+    await client.query(
+      "INSERT INTO notifications (user_id, notification_type, title, message, related_job_id) VALUES ($1, 'agreement.proposed', 'Cost agreement needs your review', $2, $3)",
+      [isCustomer ? req.params.workerId : job.customer_id, (isCustomer ? "The customer" : "The worker") + " proposed a cost of ₹" + agreedPrice.toLocaleString("en-IN") + " for " + job.title + ". Review it in your workspace.", job.id]
+    );
+    await client.query("COMMIT");
+    res.json({ success: true, message: "Cost proposal saved. The other party must accept it to confirm the agreement.", agreement: saved.rows[0] });
+  } catch (error) {
+    await client.query("ROLLBACK").catch(() => {});
+    console.error("Cost agreement proposal error:", error.message);
+    res.status(500).json({ success: false, message: "Could not save the cost proposal." });
+  } finally {
+    client.release();
+  }
+});
+
+router.post("/:id/workers/:workerId/agreement/accept", requireAuth, async (req, res) => {
+  if (!/^\\d+$/.test(req.params.id) || !/^\\d+$/.test(req.params.workerId)) {
+    return res.status(400).json({ success: false, message: "Invalid job or worker ID." });
+  }
+  const client = await pool.connect();
+  try {
+    await client.query("BEGIN");
+    const result = await client.query(
+      "SELECT * FROM job_agreements WHERE job_id = $1 AND worker_id = $2 FOR UPDATE",
+      [req.params.id, req.params.workerId]
+    );
+    const agreement = result.rows[0];
+    if (!agreement || agreement.status !== "proposed") {
+      await client.query("ROLLBACK");
+      return res.status(409).json({ success: false, message: "There is no pending cost proposal to accept." });
+    }
+    const isCustomer = String(agreement.customer_id) === String(req.user.id);
+    const isWorker = String(agreement.worker_id) === String(req.user.id);
+    if (!isCustomer && !isWorker) {
+      await client.query("ROLLBACK");
+      return res.status(403).json({ success: false, message: "Only the customer and assigned worker can accept this agreement." });
+    }
+    if (String(agreement.proposed_by) === String(req.user.id)) {
+      await client.query("ROLLBACK");
+      return res.status(409).json({ success: false, message: "You proposed this amount. The other party must accept it." });
+    }
+    const updated = await client.query(
+      `UPDATE job_agreements
+       SET customer_accepted_at = CASE WHEN $3 THEN COALESCE(customer_accepted_at, NOW()) ELSE customer_accepted_at END,
+           worker_accepted_at = CASE WHEN $4 THEN COALESCE(worker_accepted_at, NOW()) ELSE worker_accepted_at END,
+           status = CASE
+             WHEN (customer_accepted_at IS NOT NULL OR $3) AND (worker_accepted_at IS NOT NULL OR $4) THEN 'accepted'
+             ELSE 'proposed'
+           END,
+           accepted_at = CASE
+             WHEN (customer_accepted_at IS NOT NULL OR $3) AND (worker_accepted_at IS NOT NULL OR $4) THEN NOW()
+             ELSE NULL
+           END,
+           updated_at = NOW()
+       WHERE id = $1
+       RETURNING *`,
+      [agreement.id, req.user.id, isCustomer, isWorker]
+    );
+    const confirmed = updated.rows[0].status === "accepted";
+    if (confirmed) {
+      await client.query(
+        "UPDATE job_assignments SET agreed_price = $3 WHERE job_id = $1 AND worker_id = $2",
+        [agreement.job_id, agreement.worker_id, agreement.agreed_price]
+      );
+    }
+    await client.query(
+      "INSERT INTO notifications (user_id, notification_type, title, message, related_job_id) VALUES ($1, 'agreement.accepted', $2, $3, $4)",
+      [isCustomer ? agreement.worker_id : agreement.customer_id, confirmed ? "Cost agreement confirmed" : "Cost agreement accepted", confirmed ? "Both parties accepted the cost agreement for job #" + agreement.job_id + "." : "The other party accepted. The agreement is waiting for the remaining acceptance.", agreement.job_id]
+    );
+    await client.query("COMMIT");
+    res.json({ success: true, message: confirmed ? "Both parties accepted. The cost agreement is confirmed." : "Your acceptance is recorded. The agreement is waiting for the other party.", agreement: updated.rows[0] });
+  } catch (error) {
+    await client.query("ROLLBACK").catch(() => {});
+    console.error("Cost agreement acceptance error:", error.message);
+    res.status(500).json({ success: false, message: "Could not accept the cost agreement." });
+  } finally {
+    client.release();
+  }
+});
+
 router.get("/assigned/mine", requireAuth, requireRole("worker"), async (req, res) => {
   try {
     const result = await pool.query(
