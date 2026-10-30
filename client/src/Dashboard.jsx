@@ -325,7 +325,6 @@ function CostAgreement({ agreement, jobId, workerId, userId, role, money, onProp
   const isConfirmed = ['accepted', 'completed'].includes(agreement?.status)
   const isClosed = ['completed', 'cancelled'].includes(agreement?.status)
   const proposedByMe = agreement && String(agreement.proposed_by) === String(userId)
-  const otherAccepted = agreement && (role === 'customer' ? Boolean(agreement.worker_accepted_at) : Boolean(agreement.customer_accepted_at))
   const balance = Number(total || 0) - Number(advance || 0)
 
   return <section className="cost-agreement">
