@@ -8,6 +8,26 @@ const amountOk = value => Number.isFinite(Number(value)) && Number(value) >= 0 &
 
 // Agreed price: only the customer who owns the job can set/change it,
 // and only for an assigned worker before completion.
+// Update the rate using the worker ID shown in the customer's assigned-worker list.
+router.patch("/jobs/:jobId/workers/:workerId/rate", requireAuth, requireRole("customer"), async (req, res) => {
+  const { jobId, workerId } = req.params;
+  const price = Number(req.body.agreedPrice);
+  if (!idOk(jobId) || !idOk(workerId) || !amountOk(req.body.agreedPrice)) return res.status(400).json({ success:false, message:"Enter a valid agreed price." });
+  try {
+    const result = await pool.query(
+      `UPDATE job_assignments a SET agreed_price=$1
+       FROM jobs j WHERE a.job_id=j.id AND j.id=$2 AND a.worker_id=$3 AND j.customer_id=$4
+       AND a.status IN ('accepted','in_progress')
+       RETURNING a.id,a.job_id,a.worker_id,a.agreed_price,a.status`,
+      [price, jobId, workerId, req.user.id]
+    );
+    if (!result.rowCount) return res.status(404).json({ success:false, message:"No active assignment for this worker was found under your job. Refresh My Jobs and try again." });
+    await pool.query("UPDATE job_agreements SET agreed_price=$1, updated_at=NOW() WHERE job_id=$2 AND worker_id=$3 AND status='accepted'",[price,jobId,workerId]);
+    res.json({ success:true, agreement:result.rows[0] });
+  } catch (e) { console.error("Rate update:",e.message); res.status(500).json({success:false,message:"Could not save agreed price."}); }
+});
+
+// Backward-compatible assignment-ID endpoint; resolve by the verified assignment row.
 router.patch("/jobs/:jobId/assignments/:assignmentId/rate", requireAuth, requireRole("customer"), async (req, res) => {
   const { jobId, assignmentId } = req.params;
   const price = Number(req.body.agreedPrice);
@@ -15,14 +35,15 @@ router.patch("/jobs/:jobId/assignments/:assignmentId/rate", requireAuth, require
   try {
     const result = await pool.query(
       `UPDATE job_assignments a SET agreed_price=$1
-       FROM jobs j WHERE a.id=$2 AND a.job_id=j.id AND j.id=$3 AND j.customer_id=$4
-       AND a.status NOT IN ('completed','cancelled')
+       FROM jobs j WHERE a.job_id=j.id AND j.id=$2 AND a.id=$3 AND j.customer_id=$4
+       AND a.status IN ('accepted','in_progress')
        RETURNING a.id,a.job_id,a.worker_id,a.agreed_price,a.status`,
-      [price, assignmentId, jobId, req.user.id]
+      [price,jobId,assignmentId,req.user.id]
     );
-    if (!result.rowCount) return res.status(404).json({ success:false, message:"Active assignment not found for your job." });
-    res.json({ success:true, agreement:result.rows[0] });
-  } catch (e) { console.error("Rate update:",e.message); res.status(500).json({success:false,message:"Could not save agreed price."}); }
+    if (!result.rowCount) return res.status(404).json({ success:false, message:"No active assignment was found for this job. Refresh My Jobs and retry." });
+    await pool.query("UPDATE job_agreements SET agreed_price=$1, updated_at=NOW() WHERE job_id=$2 AND worker_id=$3 AND status='accepted'",[price,jobId,result.rows[0].worker_id]);
+    res.json({success:true,agreement:result.rows[0]});
+  } catch(e) { console.error("Rate update:",e.message); res.status(500).json({success:false,message:"Could not save agreed price."}); }
 });
 
 // Payment records are bookkeeping only. No money is transferred by this endpoint.
