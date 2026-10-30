@@ -41,14 +41,6 @@ function App() {
   const [notice, setNotice] = useState('')
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
-  const [theme, setTheme] = useState(() => {
-    try { return localStorage.getItem('nithyaseva_theme') === 'dark' ? 'dark' : 'light' } catch { return 'light' }
-  })
-  useEffect(() => {
-    document.documentElement.setAttribute('data-theme', theme)
-    try { localStorage.setItem('nithyaseva_theme', theme) } catch { /* Theme still applies for this session. */ }
-  }, [theme])
-
   const [signedInUser, setSignedInUser] = useState(() => {
     try {
       const saved = localStorage.getItem('nithyaseva_user')
@@ -276,19 +268,6 @@ function App() {
         <p>Every skill has value. Every worker deserves opportunity.</p>
         <span className="footer-copy">© {new Date().getFullYear()} NithyaSeva</span>
       </footer>
-      <button
-        type="button"
-        className="theme-doll-toggle"
-        onClick={() => setTheme(current => current === 'light' ? 'dark' : 'light')}
-        aria-label={theme === 'light' ? 'Switch to dark theme' : 'Switch to light theme'}
-        title={theme === 'light' ? 'Switch to dark theme' : 'Switch to light theme'}
-      >
-        <svg viewBox="0 0 48 52" role="img" aria-hidden="true">
-          <circle cx="24" cy="8" r="5.5" />
-          <path d="M24 15c-4 2-6 5-6 10v7h12v-7c0-5-2-8-6-10ZM18 21H9M30 21h9M24 32l-9 13M24 32l9 13M15 45l-3 2M33 45l3 2" /><circle cx="7" cy="21" r="2" /><circle cx="41" cy="21" r="2" />
-        </svg>
-        <span className="theme-toggle-status" aria-hidden="true">{theme === 'light' ? '☾' : '☀'}</span>
-      </button>
     </main>
   )
 }
