@@ -285,7 +285,7 @@ function App() {
       >
         <svg viewBox="0 0 48 52" role="img" aria-hidden="true">
           <circle cx="24" cy="8" r="5.5" />
-          <path d="M24 15v17M7 21h34M24 32 13 47M24 32l11 15" />
+          <path d="M24 15c-4 2-6 5-6 10v7h12v-7c0-5-2-8-6-10ZM18 21H9M30 21h9M24 32l-9 13M24 32l9 13M15 45l-3 2M33 45l3 2" /><circle cx="7" cy="21" r="2" /><circle cx="41" cy="21" r="2" />
         </svg>
         <span className="theme-toggle-status" aria-hidden="true">{theme === 'light' ? '☾' : '☀'}</span>
       </button>
