@@ -473,7 +473,7 @@ router.patch("/:id/status", requireAuth, async (req, res) => {
         await client.query("ROLLBACK");
         return res.status(403).json({ success: false, message: "Only the customer, an assigned worker, or an admin can request cancellation." });
       }
-      if (["open", "assigned"].includes(job.status)) {
+      if (["open", "assigned", "accepted"].includes(job.status)) {
         if (!isCustomer && !isAdmin) {
           await client.query("ROLLBACK");
           return res.status(403).json({ success: false, message: "Before work starts, only the customer or admin can cancel this job." });
