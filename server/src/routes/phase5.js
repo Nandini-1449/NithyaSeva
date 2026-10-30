@@ -46,6 +46,33 @@ router.patch("/jobs/:jobId/assignments/:assignmentId/rate", requireAuth, require
   } catch(e) { console.error("Rate update:",e.message); res.status(500).json({success:false,message:"Could not save agreed price."}); }
 });
 
+// Presentation demo payment: records a pending simulation only; no gateway or money transfer.
+router.post("/jobs/:jobId/payments/demo", requireAuth, requireRole("customer"), async (req,res) => {
+  const { jobId } = req.params;
+  const workerId = req.body.workerId;
+  const amount = Number(req.body.amount);
+  if (!idOk(jobId) || !idOk(workerId) || !Number.isFinite(amount) || amount <= 0 || amount > 100000000) {
+    return res.status(400).json({success:false,message:"Choose a worker and enter a valid amount."});
+  }
+  try {
+    const result = await pool.query(
+      `INSERT INTO payments(job_id,payer_id,payee_id,amount,payment_method,status)
+       SELECT j.id,j.customer_id,a.worker_id,$4,'demo-online','pending'
+       FROM jobs j JOIN job_assignments a ON a.job_id=j.id
+       WHERE j.id=$1 AND a.worker_id=$2 AND j.customer_id=$3
+         AND j.status='completed' AND a.status='completed'
+         AND (a.agreed_price IS NULL OR $4 <= a.agreed_price)
+       RETURNING id,job_id,payer_id,payee_id,amount,payment_method,status,created_at`,
+      [jobId,workerId,req.user.id,amount]
+    );
+    if (!result.rowCount) return res.status(404).json({success:false,message:"Completed job and worker assignment not found, or amount exceeds the agreed price."});
+    res.status(201).json({success:true,payment:result.rows[0],notice:"Presentation demo only. No real payment was processed."});
+  } catch(e) {
+    console.error("Demo payment:",e.message);
+    res.status(500).json({success:false,message:"Could not save demo payment record."});
+  }
+});
+
 // Razorpay test/live checkout: create orders server-side and verify signatures server-side.
 const https = require("https");
 const crypto = require("crypto");
