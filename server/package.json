@@ -4,7 +4,7 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "test": "node --check src/index.js && node --check src/routes/workProof.js",
+    "test": "node --check src/index.js && node --check src/routes/chat.js && node --check src/routes/workProof.js",
     "start": "node src/index.js"
   },
   "keywords": [],
