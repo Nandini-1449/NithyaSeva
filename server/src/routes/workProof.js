@@ -11,15 +11,8 @@ const uploadDir = path.join(__dirname, "..", "..", "uploads", "work-photos");
 fs.mkdirSync(uploadDir, { recursive: true });
 
 const allowedTypes = new Set(["image/jpeg", "image/png", "image/webp"]);
-const storage = multer.diskStorage({
-  destination: (_req, _file, cb) => cb(null, uploadDir),
-  filename: (_req, file, cb) => {
-    const ext = file.mimetype === "image/jpeg" ? ".jpg" : file.mimetype === "image/png" ? ".png" : ".webp";
-    cb(null, crypto.randomUUID() + ext);
-  }
-});
 const upload = multer({
-  storage,
+  storage: multer.memoryStorage(),
   limits: { fileSize: 5 * 1024 * 1024, files: 1 },
   fileFilter: (_req, file, cb) => cb(null, allowedTypes.has(file.mimetype))
 });
@@ -62,27 +55,27 @@ router.post("/jobs/:jobId/photos", requireAuth, (req, res, next) => {
   next();
 }), async (req, res) => {
   if (!/^\d+$/.test(req.params.jobId)) {
-    fs.unlink(req.file.path, () => {});
+
     return res.status(400).json({ success: false, message: "Invalid job ID." });
   }
   const phase = req.body.phase;
   if (!["before", "after"].includes(phase)) {
-    fs.unlink(req.file.path, () => {});
+
     return res.status(400).json({ success: false, message: "Photo stage must be before or after work." });
   }
   try {
     const access = await canAccessJob(req.params.jobId, req.user);
     if (!access.exists || !access.allowed || req.user.role !== "worker") {
-      fs.unlink(req.file.path, () => {});
+
       return res.status(access.exists ? 403 : 404).json({ success: false, message: "Only an assigned worker can upload photos for this job." });
     }
     const result = await pool.query(
-      "INSERT INTO job_work_photos (job_id, worker_id, phase, storage_name, original_name, mime_type, size_bytes) VALUES ($1,$2,$3,$4,$5,$6,$7) RETURNING id, job_id, worker_id, phase, original_name, mime_type, size_bytes, created_at",
-      [req.params.jobId, req.user.id, phase, req.file.filename, path.basename(req.file.originalname).slice(0, 255), req.file.mimetype, req.file.size]
+      "INSERT INTO job_work_photos (job_id, worker_id, phase, storage_name, original_name, mime_type, size_bytes, image_data) VALUES ($1,$2,$3,$4,$5,$6,$7,$8) RETURNING id, job_id, worker_id, phase, original_name, mime_type, size_bytes, created_at",
+      [req.params.jobId, req.user.id, phase, crypto.randomUUID(), path.basename(req.file.originalname).slice(0, 255), req.file.mimetype, req.file.size, req.file.buffer]
     );
     res.status(201).json({ success: true, message: "Work photo uploaded.", photo: result.rows[0] });
   } catch (error) {
-    fs.unlink(req.file.path, () => {});
+
     console.error("Work photo upload error:", error.message);
     res.status(500).json({ success: false, message: "Could not save work photo." });
   }
@@ -92,16 +85,17 @@ router.get("/photos/:photoId", requireAuth, async (req, res) => {
   if (!/^\d+$/.test(req.params.photoId)) return res.status(400).json({ success: false, message: "Invalid photo ID." });
   try {
     const result = await pool.query(
-      "SELECT p.job_id, p.storage_name, p.mime_type FROM job_work_photos p WHERE p.id = $1",
+      "SELECT p.job_id, p.storage_name, p.mime_type, p.image_data FROM job_work_photos p WHERE p.id = $1",
       [req.params.photoId]
     );
     if (!result.rowCount) return res.status(404).json({ success: false, message: "Photo not found." });
     const access = await canAccessJob(result.rows[0].job_id, req.user);
     if (!access.allowed) return res.status(403).json({ success: false, message: "You are not allowed to view this photo." });
-    const filePath = path.join(uploadDir, path.basename(result.rows[0].storage_name));
-    if (!fs.existsSync(filePath)) return res.status(404).json({ success: false, message: "Photo file is missing from local storage." });
     res.setHeader("Content-Type", result.rows[0].mime_type);
     res.setHeader("Cache-Control", "private, no-store");
+    if (result.rows[0].image_data) return res.end(result.rows[0].image_data);
+    const filePath = path.join(uploadDir, path.basename(result.rows[0].storage_name || ""));
+    if (!fs.existsSync(filePath)) return res.status(404).json({ success: false, message: "This older photo is missing from local storage. Please upload it again." });
     return res.sendFile(filePath);
   } catch (error) {
     console.error("Work photo retrieval error:", error.message);
