@@ -7,7 +7,6 @@ const jobRoutes = require("./routes/jobs");
 const trustRoutes = require("./routes/trust");
 const workProofRoutes = require("./routes/workProof");
 const phase5Routes = require("./routes/phase5");
-const chatRoutes = require("./routes/chat");
 
 const app = express();
 const PORT = Number(process.env.PORT || 5000);
@@ -53,7 +52,6 @@ app.get("/api/health", async (req, res) => {
 app.use("/api/auth", authRoutes);
 app.use("/api/workers", workerRoutes);
 app.use("/api/jobs", jobRoutes);
-app.use("/api/chat", chatRoutes);
 app.use("/api", trustRoutes);
 app.use("/api/work-proof", workProofRoutes);
 app.use("/api", phase5Routes);
