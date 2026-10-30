@@ -46,6 +46,83 @@ router.patch("/jobs/:jobId/assignments/:assignmentId/rate", requireAuth, require
   } catch(e) { console.error("Rate update:",e.message); res.status(500).json({success:false,message:"Could not save agreed price."}); }
 });
 
+// Razorpay test/live checkout: create orders server-side and verify signatures server-side.
+const https = require("https");
+const crypto = require("crypto");
+
+function razorpayRequest(path, payload) {
+  return new Promise((resolve, reject) => {
+    const auth = Buffer.from(process.env.RAZORPAY_KEY_ID + ":" + process.env.RAZORPAY_KEY_SECRET).toString("base64");
+    const body = JSON.stringify(payload);
+    const request = https.request({
+      hostname: "api.razorpay.com", path, method: "POST",
+      headers: { Authorization: "Basic " + auth, "Content-Type": "application/json", "Content-Length": Buffer.byteLength(body) }
+    }, response => {
+      let data = "";
+      response.setEncoding("utf8");
+      response.on("data", chunk => data += chunk);
+      response.on("end", () => {
+        let parsed = {};
+        try { parsed = JSON.parse(data); } catch {}
+        if (response.statusCode < 200 || response.statusCode >= 300) return reject(new Error(parsed.error?.description || "Razorpay order creation failed."));
+        resolve(parsed);
+      });
+    });
+    request.on("error", reject);
+    request.write(body);
+    request.end();
+  });
+}
+
+router.get("/payments/razorpay/config", requireAuth, requireRole("customer"), (req,res) => {
+  if (!process.env.RAZORPAY_KEY_ID || !process.env.RAZORPAY_KEY_SECRET) return res.status(503).json({success:false,message:"Online payments are not configured yet. Add Razorpay test keys to the server environment."});
+  res.json({success:true,keyId:process.env.RAZORPAY_KEY_ID});
+});
+
+router.post("/jobs/:jobId/razorpay/order", requireAuth, requireRole("customer"), async (req,res) => {
+  const {jobId}=req.params, workerId=req.body.workerId, amount=Number(req.body.amount);
+  if (!idOk(jobId) || !idOk(workerId) || !Number.isFinite(amount) || amount<=0 || amount>100000000) return res.status(400).json({success:false,message:"Choose a worker and enter a valid payment amount."});
+  if (!process.env.RAZORPAY_KEY_ID || !process.env.RAZORPAY_KEY_SECRET) return res.status(503).json({success:false,message:"Razorpay test keys are not configured on the server."});
+  const client=await pool.connect();
+  try {
+    await client.query("BEGIN");
+    const found=await client.query(
+      `SELECT j.id,j.customer_id,j.status,a.worker_id,a.agreed_price
+       FROM jobs j JOIN job_assignments a ON a.job_id=j.id
+       WHERE j.id=$1 AND a.worker_id=$2 AND a.status='completed' AND j.status='completed' AND j.customer_id=$3
+       FOR UPDATE OF j,a`,[jobId,workerId,req.user.id]);
+    if(!found.rowCount){await client.query("ROLLBACK");return res.status(404).json({success:false,message:"Completed job assignment not found."});}
+    const row=found.rows[0];
+    if(row.agreed_price!==null && amount>Number(row.agreed_price)){await client.query("ROLLBACK");return res.status(400).json({success:false,message:"Payment cannot exceed the agreed price."});}
+    const order=await razorpayRequest("/v1/orders",{amount:Math.round(amount*100),currency:"INR",receipt:"ns_job_"+jobId+"_"+Date.now(),notes:{job_id:String(jobId),worker_id:String(workerId),customer_id:String(req.user.id)}});
+    const saved=await client.query(
+      "INSERT INTO payments(job_id,payer_id,payee_id,amount,payment_method,status,razorpay_order_id) VALUES($1,$2,$3,$4,'razorpay','pending',$5) RETURNING id,job_id,amount,currency,status,razorpay_order_id",
+      [jobId,req.user.id,workerId,amount,order.id]);
+    await client.query("COMMIT");
+    res.status(201).json({success:true,payment:saved.rows[0],order:{id:order.id,amount:order.amount,currency:order.currency},keyId:process.env.RAZORPAY_KEY_ID});
+  } catch(e){await client.query("ROLLBACK").catch(()=>{});console.error("Razorpay order:",e.message);res.status(502).json({success:false,message:"Could not create online payment order. Please try again."});}
+  finally{client.release();}
+});
+
+router.post("/payments/razorpay/verify", requireAuth, requireRole("customer"), async (req,res) => {
+  const {razorpay_order_id,razorpay_payment_id,razorpay_signature}=req.body;
+  if(typeof razorpay_order_id!=="string"||typeof razorpay_payment_id!=="string"||typeof razorpay_signature!=="string") return res.status(400).json({success:false,message:"Payment verification details are incomplete."});
+  const expected=crypto.createHmac("sha256",process.env.RAZORPAY_KEY_SECRET||"").update(razorpay_order_id+"|"+razorpay_payment_id).digest("hex");
+  const supplied=Buffer.from(razorpay_signature,"hex"), correct=Buffer.from(expected,"hex");
+  if(supplied.length!==correct.length||!crypto.timingSafeEqual(supplied,correct)) return res.status(400).json({success:false,message:"Payment signature verification failed."});
+  try{
+    const updated=await pool.query(
+      "UPDATE payments SET status='succeeded',razorpay_payment_id=$1,razorpay_signature=$2 WHERE razorpay_order_id=$3 AND payer_id=$4 AND status='pending' RETURNING id,job_id,amount,status,created_at",
+      [razorpay_payment_id,razorpay_signature,razorpay_order_id,req.user.id]);
+    if(!updated.rowCount){
+      const existing=await pool.query("SELECT id,status FROM payments WHERE razorpay_order_id=$1 AND payer_id=$2",[razorpay_order_id,req.user.id]);
+      if(existing.rows[0]?.status==="succeeded") return res.json({success:true,payment:existing.rows[0],message:"Payment was already verified."});
+      return res.status(404).json({success:false,message:"Pending payment order was not found."});
+    }
+    res.json({success:true,payment:updated.rows[0],message:"Online payment verified successfully."});
+  }catch(e){console.error("Razorpay verification:",e.message);res.status(500).json({success:false,message:"Could not verify payment."});}
+});
+
 // Payment records are bookkeeping only. No money is transferred by this endpoint.
 router.post("/jobs/:jobId/payments", requireAuth, async (req, res) => {
   const { jobId } = req.params;
