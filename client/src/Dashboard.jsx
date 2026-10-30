@@ -256,17 +256,27 @@ function WorkPhotos({ jobId, user, request, mode }) {
     } finally { setBusy(false); }
   }
 
-  async function openPhoto(photo) {
-    try {
+  const [photoUrls, setPhotoUrls] = useState({});
+  useEffect(() => {
+    let active = true;
+    const urls = [];
+    async function loadImages() {
       const token = localStorage.getItem('nithyaseva_token');
-      const response = await fetch(API + '/work-proof/photos/' + photo.id, { headers: token ? { Authorization: 'Bearer ' + token } : {} });
-      if (!response.ok) throw new Error('Could not open photo.');
-      const blob = await response.blob();
-      const url = URL.createObjectURL(blob);
-      window.open(url, '_blank', 'noopener,noreferrer');
-      setTimeout(() => URL.revokeObjectURL(url), 60000);
-    } catch (e) { setPhotoError(e.message); }
-  }
+      const entries = await Promise.all(photos.map(async photo => {
+        try {
+          const response = await fetch(API + '/work-proof/photos/' + photo.id, { headers: token ? { Authorization: 'Bearer ' + token } : {} });
+          if (!response.ok) throw new Error('Photo could not be loaded.');
+          const url = URL.createObjectURL(await response.blob());
+          urls.push(url);
+          return [photo.id, url];
+        } catch { return [photo.id, null]; }
+      }));
+      if (active) setPhotoUrls(Object.fromEntries(entries));
+      else urls.forEach(URL.revokeObjectURL);
+    }
+    if (photos.length) loadImages(); else setPhotoUrls({});
+    return () => { active = false; urls.forEach(URL.revokeObjectURL); };
+  }, [photos]);
 
   return <section className="work-photos">
     <h4>Work photos</h4><button className="dash-secondary" type="button" onClick={() => setReloadKey(k => k + 1)}>Refresh photos</button>
@@ -281,7 +291,7 @@ function WorkPhotos({ jobId, user, request, mode }) {
       <h5>{stage === 'before' ? 'Before work' : 'After work'}</h5>
       <div className="dash-grid">{photos.filter(p => p.phase === stage).map(photo => <article className="dash-card" key={photo.id}>
         <p>{photo.worker_name} · {new Date(photo.created_at).toLocaleString()}</p>
-        <button className="dash-secondary" type="button" onClick={() => openPhoto(photo)}>View photo</button>
+        {photoUrls[photo.id] ? <img src={photoUrls[photo.id]} alt={stage === 'before' ? 'Before-work evidence' : 'After-work evidence'} style={{ width: '100%', maxHeight: '260px', objectFit: 'contain', borderRadius: '10px' }} /> : <p className="dash-muted">Loading photo…</p>}
       </article>)}</div>
       {!photos.some(p => p.phase === stage) && <p className="dash-muted">No {stage}-work photos uploaded yet.</p>}
     </div>)}
