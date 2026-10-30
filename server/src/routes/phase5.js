@@ -154,7 +154,7 @@ router.get("/disputes/mine", requireAuth, async (req,res) => {
        opener.full_name AS opened_by_name,against.full_name AS against_name
        FROM job_disputes d JOIN jobs j ON j.id=d.job_id
        JOIN users opener ON opener.id=d.opened_by JOIN users against ON against.id=d.against_user
-       WHERE d.opened_by=$1 OR d.against_user=$1 ORDER BY d.created_at DESC LIMIT 100`,[req.user.id]);
+       WHERE ($2::boolean = TRUE OR d.opened_by=$1 OR d.against_user=$1) ORDER BY d.created_at DESC LIMIT 100`,[req.user.id,req.user.role==="admin"]);
     res.json({success:true,disputes:result.rows});
   } catch(e) { console.error("Disputes:",e.message); res.status(500).json({success:false,message:"Could not load disputes."}); }
 });
