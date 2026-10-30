@@ -206,7 +206,7 @@ export default function Dashboard({ user, onLogout }) {
   const tabs = user.role === 'admin'
     ? [['trust', 'Dispute management']]
     : user.role === 'customer'
-      ? [['workers', 'Find workers'], ['post', 'Post a job'], ['myjobs', 'My jobs'], ['applications', 'Applications'], ['trust', 'Payments & trust'], ['notifications', 'Notifications']]
+      ? [['workers', 'Find workers'], ['post', 'Post a job'], ['myjobs', 'My jobs'], ['applications', 'Applications'], ['trust', 'Payments & reviews'], ['notifications', 'Notifications']]
       : [['jobs', 'Find jobs'], ['mywork', 'My work'], ['profile', 'My profile'], ['trust', 'Earnings & trust'], ['notifications', 'Notifications']]
 
   return <section className="dashboard">
