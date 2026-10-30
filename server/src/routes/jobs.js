@@ -507,7 +507,7 @@ router.post("/:id/applications/:applicationId/accept", requireAuth, requireRole(
       [job.id, application.worker_id, agreedPrice]
     );
     await client.query(
-      "INSERT INTO job_agreements (job_id, customer_id, worker_id, agreed_price, scope_of_work, status, proposed_by, accepted_at) VALUES ($1,$2,$3,$4,$5,'accepted',$2,NOW())",
+      "INSERT INTO job_agreements (job_id, customer_id, worker_id, agreed_price, advance_amount, scope_of_work, status, proposed_by, customer_accepted_at) VALUES ($1,$2,$3,$4,0,$5,'proposed',$2,NOW())",
       [job.id, job.customer_id, application.worker_id, agreedPrice, job.description]
     );
     await client.query(
